@@ -434,15 +434,97 @@ export function RegisterPage({ onLogin }: { onLogin: () => void }) {
 
 // ---------- DASHBOARD ----------
 export function DashboardPage({ onControl }: { onControl: () => void }) {
-  const { profile, effectiveRole, permissions } = useAuth();
+  const { profile, effectiveRole, permissions, updateProfile } = useAuth();
   const [notifs, setNotifs] = useState<any[]>([]);
-  useEffect(() => { api.getNotifications().then(({ notifications }) => setNotifs(notifications ?? [])).catch(() => {}); }, []);
+  const [editingName, setEditingName] = useState(false);
+  const [newName, setNewName] = useState(profile?.username ?? "");
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (profile?.username) setNewName(profile.username);
+  }, [profile?.username]);
+
+  useEffect(() => {
+    api.getNotifications().then(({ notifications }) => setNotifs(notifications ?? [])).catch(() => {});
+  }, []);
+
   const admin = effectiveRole !== "HUMAN";
+
+  async function handleSaveName() {
+    if (!newName.trim() || newName.trim() === profile?.username) {
+      setEditingName(false);
+      return;
+    }
+    setSaving(true);
+    setSaveMsg(null);
+    try {
+      await updateProfile({ username: newName.trim() });
+      setSaveMsg("Handle updated!");
+      setEditingName(false);
+      setTimeout(() => setSaveMsg(null), 3000);
+    } catch (e: any) {
+      setSaveMsg(e.message || "Failed to update");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <>
-      <PageHead kicker={`${brand.codename} // OPERATOR`} title="Dashboard"
-        sub={profile ? `Signed in as ${profile.username} · ${effectiveRole}` : undefined} />
+      <PageHead
+        kicker={`${brand.codename} // OPERATOR`}
+        title="Dashboard"
+        sub={profile ? `Signed in as ${profile.username} · ${effectiveRole}` : undefined}
+      />
       <section className="mx-auto max-w-7xl px-5 py-16">
+        {/* Custom Username Setup Banner if user has default name */}
+        {profile && (
+          <div className="mb-6 flex flex-col gap-4 border border-accent/40 bg-accent/5 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xs font-bold text-accent">OPERATOR IDENTITY</span>
+                <span className="font-mono text-[10px] text-muted">({profile.email})</span>
+              </div>
+              <div className="mt-1 text-sm text-foreground">
+                Current Handle: <span className="font-display font-black text-accent">{profile.username}</span>
+              </div>
+            </div>
+            {!editingName ? (
+              <button
+                onClick={() => setEditingName(true)}
+                className="border border-accent px-4 py-2 font-mono text-[11px] font-bold tracking-[0.15em] text-accent transition-colors hover:bg-accent/10"
+              >
+                CUSTOMIZE USERNAME ✎
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <input
+                  className="border border-accent bg-background px-3 py-1.5 font-mono text-sm outline-none"
+                  value={newName}
+                  placeholder="New Gamer Handle"
+                  onChange={(e) => setNewName(e.target.value)}
+                  autoFocus
+                />
+                <button
+                  disabled={saving || !newName.trim()}
+                  onClick={handleSaveName}
+                  className="bg-accent px-3 py-1.5 font-mono text-xs font-bold text-accent-foreground"
+                >
+                  {saving ? "SAVING…" : "SAVE"}
+                </button>
+                <button
+                  onClick={() => { setEditingName(false); setNewName(profile.username); }}
+                  className="border border-border px-3 py-1.5 font-mono text-xs text-muted"
+                >
+                  CANCEL
+                </button>
+              </div>
+            )}
+            {saveMsg && <span className="font-mono text-xs text-accent">{saveMsg}</span>}
+          </div>
+        )}
+
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="border border-border bg-surface p-6 lg:col-span-2">
             <Mono>QUICK ACTIONS</Mono>
@@ -512,22 +594,97 @@ export function NotificationsPage() {
 
 // ---------- PROFILE ----------
 export function ProfilePage() {
-  const { profile, logout } = useAuth();
+  const { profile, updateProfile, logout } = useAuth();
+  const [username, setUsername] = useState(profile?.username ?? "");
+  const [region, setRegion] = useState(profile?.region ?? "GLOBAL");
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+
+  useEffect(() => {
+    if (profile) {
+      setUsername(profile.username);
+      setRegion(profile.region);
+    }
+  }, [profile]);
+
   if (!profile) return null;
+
+  async function handleSave() {
+    if (!username.trim()) return;
+    setSaving(true);
+    setMsg(null);
+    try {
+      await updateProfile({ username: username.trim(), region });
+      setMsg({ text: "Profile updated successfully!", ok: true });
+    } catch (e: any) {
+      setMsg({ text: e.message || "Failed to save profile", ok: false });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const input = "w-full border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent";
+
   return (
     <>
-      <PageHead kicker={`${brand.codename} // IDENTITY`} title="Profile" />
+      <PageHead kicker={`${brand.codename} // IDENTITY`} title="Profile Settings" />
       <section className="mx-auto max-w-lg px-5 py-16">
         <div className="border border-border bg-surface p-8">
-          <dl className="space-y-4">
-            {[["USERNAME", profile.username], ["EMAIL", profile.email], ["REGION", profile.region], ["ROLE", profile.role]].map(([k, v]) => (
-              <div key={k} className="flex items-center justify-between border-b border-border pb-3">
-                <dt className="font-mono text-[11px] tracking-[0.1em] text-muted">{k}</dt>
-                <dd className="font-mono text-sm text-foreground">{v}</dd>
+          <div className="space-y-4">
+            <div>
+              <Mono>EMAIL (LOGIN ACCOUNT)</Mono>
+              <div className="mt-1 font-mono text-sm text-muted">{profile.email}</div>
+            </div>
+
+            <div>
+              <Mono>OPERATOR HANDLE / USERNAME</Mono>
+              <input
+                className={`${input} mt-1.5 font-mono text-sm`}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Custom Gamer Handle"
+              />
+              <p className="mt-1 text-[11px] text-muted">This name will appear on leaderboards, brackets, and the navbar.</p>
+            </div>
+
+            <div>
+              <Mono>COMPETITIVE REGION</Mono>
+              <select
+                className={`${input} mt-1.5`}
+                value={region}
+                onChange={(e) => setRegion(e.target.value)}
+              >
+                {["GLOBAL", "NA", "EU", "APAC", "SA", "MENA"].map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <Mono>SYSTEM ROLE</Mono>
+              <div className="mt-1 font-mono text-sm font-bold text-accent">{profile.role}</div>
+            </div>
+
+            {msg && (
+              <div className={`font-mono text-xs ${msg.ok ? "text-success" : "text-danger"}`}>
+                {msg.text}
               </div>
-            ))}
-          </dl>
-          <button onClick={() => { logout(); navigate("home"); }} className={`${ghost} mt-6 w-full`}>LOG OUT</button>
+            )}
+
+            <button
+              onClick={handleSave}
+              disabled={saving || !username.trim() || (username === profile.username && region === profile.region)}
+              className={`${primary} w-full`}
+            >
+              {saving ? "SAVING CHANGES…" : "SAVE PROFILE"}
+            </button>
+          </div>
+
+          <div className="mt-8 border-t border-border pt-6">
+            <button onClick={() => { logout(); navigate("home"); }} className={`${ghost} w-full`}>
+              LOG OUT
+            </button>
+          </div>
         </div>
       </section>
     </>

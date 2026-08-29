@@ -81,6 +81,8 @@ export const api = {
   getSite: () => req<SiteData>("/site"),
   getTournament: () => req<{ tournament: any }>("/tournament"),
   me: () => req<{ profile: Profile; permissions: string[] }>("/me"),
+  updateProfile: (b: { username: string; region?: string }) =>
+    req<{ profile: Profile }>("/me/update-profile", { method: "POST", body: JSON.stringify(b) }),
   signup: (b: { email: string; password: string; username: string; region?: string }) =>
     req<{ profile: Profile }>("/signup", { method: "POST", body: JSON.stringify(b) }),
   seed: () => req<{ tournament: any }>("/seed", { method: "POST", body: "{}" }),

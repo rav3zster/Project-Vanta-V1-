@@ -174,6 +174,25 @@ app.get(`${P}/me`, async (c) => {
   }
 });
 
+app.post(`${P}/me/update-profile`, async (c) => {
+  try {
+    const profile = await requireProfile(c);
+    const { username, region } = await c.req.json();
+    if (!username || !username.trim()) {
+      return c.json({ error: "Username cannot be empty" }, 400);
+    }
+    const cleanUsername = String(username).trim();
+    profile.username = cleanUsername;
+    if (region) profile.region = String(region).toUpperCase().trim();
+
+    await kv.set(`user:${profile.id}`, profile);
+    await audit(profile, "profile.updated", profile.id, { username: cleanUsername, region: profile.region });
+    return c.json({ profile });
+  } catch (e) {
+    return errJson(c, e);
+  }
+});
+
 app.get(`${P}/tournament`, async (c) => {
   const t = await kv.get(TOURNAMENT_KEY);
   return c.json({ tournament: t ?? null });

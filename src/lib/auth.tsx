@@ -42,6 +42,7 @@ type AuthState = {
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   signup: (b: { email: string; password: string; username: string; region?: string }) => Promise<void>;
+  updateProfile: (b: { username: string; region?: string }) => Promise<void>;
   logout: () => Promise<void>;
   can: (perm: string) => boolean;
   setPerspective: (role: Role) => void;
@@ -164,6 +165,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateProfile = async (b: { username: string; region?: string }) => {
+    try {
+      const { profile: updated } = await api.updateProfile(b);
+      setProfile(updated);
+    } catch (e) {
+      // Fallback local update if offline
+      setProfile((prev) => (prev ? { ...prev, ...b } : prev));
+      throw e;
+    }
+  };
+
   const logout = async () => {
     await supabase.auth.signOut();
     setProfile(null);
@@ -184,6 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         loginWithGoogle,
         signup,
+        updateProfile,
         logout,
         can,
         setPerspective,

@@ -59,16 +59,19 @@ export function Mono({ children, className = "" }: { children: ReactNode; classN
 export function PlayerCard({ p }: { p: Player }) {
   return (
     <div className="group relative flex flex-col border border-border bg-surface transition-all duration-300 hover:border-accent/50 hover:bg-surface-hover">
-      <div className="grain relative aspect-[4/5] overflow-hidden border-b border-border bg-surface-secondary">
+      <div className="grain relative aspect-[4/5] w-full overflow-hidden border-b border-border bg-[#0a0b0d]">
         {p.image ? (
-          <img
-            src={p.image}
-            alt={`${p.handle} — ${p.name}`}
-            loading="lazy"
-            className="size-full object-cover grayscale transition-all duration-500 group-hover:scale-105 group-hover:grayscale-0"
-          />
+          <>
+            <img
+              src={p.image}
+              alt={`${p.handle} — ${p.name}`}
+              loading="lazy"
+              className="size-full object-cover grayscale transition-all duration-500 group-hover:scale-105 group-hover:grayscale-0"
+            />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-background/80 via-background/20 to-transparent" />
+          </>
         ) : (
-          <div className="flex size-full items-center justify-center">
+          <div className="flex size-full items-center justify-center bg-surface-secondary">
             <span className="relative z-10 font-display text-5xl font-black tracking-tighter text-border-strong">
               {(p.handle || "?").slice(0, 2)}
             </span>

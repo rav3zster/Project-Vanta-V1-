@@ -5,6 +5,7 @@ import { StatusChip, Mono } from "./ui";
 import { Bracket } from "./Bracket";
 import { getGameConfig, GAME_LIST } from "../config/games";
 import { uploadRosterImage } from "../lib/storage";
+import { ImageCropperModal } from "./ImageCropperModal";
 
 const LIFECYCLE = [
   "DRAFT", "REGISTRATION_OPEN", "REGISTRATION_CLOSED", "ROSTER_LOCK",
@@ -639,16 +640,16 @@ function RosterAdmin({
     });
   }
 
-  async function handleFileUpload(i: number, file: File) {
-    setUploadingIdx(i);
-    try {
-      const url = await uploadRosterImage(file);
-      edit(i, { image: url });
-    } catch (err) {
-      console.error("Upload error:", err);
-    } finally {
-      setUploadingIdx(null);
-    }
+  const [cropTarget, setCropTarget] = useState<{ index: number; src: string } | null>(null);
+
+  function handleFileSelect(i: number, file: File) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (reader.result) {
+        setCropTarget({ index: i, src: reader.result as string });
+      }
+    };
+    reader.readAsDataURL(file);
   }
 
   function remove(i: number) {
@@ -690,6 +691,18 @@ function RosterAdmin({
 
   return (
     <div className="border border-border bg-surface p-5">
+      {/* Interactive Crop Modal */}
+      {cropTarget && (
+        <ImageCropperModal
+          imageSrc={cropTarget.src}
+          onCropComplete={(croppedUrl) => {
+            edit(cropTarget.index, { image: croppedUrl });
+            setCropTarget(null);
+          }}
+          onCancel={() => setCropTarget(null)}
+        />
+      )}
+
       <div className="mb-4 flex items-center justify-between">
         <Mono>HOUSE ROSTER MANAGEMENT</Mono>
         <Mono>{players.length} OPERATOR{players.length === 1 ? "" : "S"}{dirty ? " · UNSAVED" : ""}</Mono>
@@ -706,7 +719,7 @@ function RosterAdmin({
           return (
             <div key={i} className="border border-border p-4 bg-background/60">
               <div className="flex flex-col gap-4 lg:flex-row">
-                {/* Image Preview & Local Upload */}
+                {/* Image Preview & Local Upload with Crop Action */}
                 <div className="flex flex-col items-center gap-2 sm:items-start">
                   <div
                     className="grain relative flex size-24 shrink-0 items-center justify-center overflow-hidden border border-border-strong bg-background"
@@ -722,27 +735,38 @@ function RosterAdmin({
                       </span>
                     )}
                   </div>
-                  <label className="cursor-pointer border border-border px-2.5 py-1 text-center font-mono text-[9px] tracking-[0.1em] text-accent transition-colors hover:border-accent hover:bg-accent/10">
-                    <span>📁 {p.image ? "REPLACE PHOTO" : "UPLOAD PHOTO"}</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) handleFileUpload(i, f);
-                      }}
-                    />
-                  </label>
-                  {p.image && (
-                    <button
-                      type="button"
-                      onClick={() => edit(i, { image: "" })}
-                      className="font-mono text-[9px] text-danger hover:underline"
-                    >
-                      ✕ Clear Photo
-                    </button>
-                  )}
+                  <div className="flex flex-col gap-1.5 w-full">
+                    <label className="cursor-pointer border border-border px-2.5 py-1 text-center font-mono text-[9px] tracking-[0.1em] text-accent transition-colors hover:border-accent hover:bg-accent/10">
+                      <span>📁 {p.image ? "REPLACE PHOTO" : "UPLOAD PHOTO"}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleFileSelect(i, f);
+                        }}
+                      />
+                    </label>
+                    {p.image && (
+                      <button
+                        type="button"
+                        onClick={() => setCropTarget({ index: i, src: p.image! })}
+                        className="border border-border-strong px-2 py-0.5 font-mono text-[9px] text-foreground hover:border-accent hover:text-accent transition-colors"
+                      >
+                        ✂ ADJUST / CROP
+                      </button>
+                    )}
+                    {p.image && (
+                      <button
+                        type="button"
+                        onClick={() => edit(i, { image: "" })}
+                        className="font-mono text-[9px] text-danger hover:underline text-center"
+                      >
+                        ✕ Clear Photo
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Operator Fields */}

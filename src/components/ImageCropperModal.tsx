@@ -166,7 +166,7 @@ export function ImageCropperModal({
         </div>
 
         {/* Interactive Cropper Viewport */}
-        <div className="flex flex-col items-center justify-center bg-[#070809] p-6">
+        <div className="flex flex-col items-center justify-center bg-[#070809] p-4 sm:p-6">
           <div
             ref={containerRef}
             onMouseDown={handleMouseDown}
@@ -174,7 +174,7 @@ export function ImageCropperModal({
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
             onWheel={handleWheel}
-            className="relative aspect-[4/5] w-72 cursor-grab overflow-hidden border-2 border-accent/80 bg-background shadow-lg active:cursor-grabbing sm:w-80"
+            className="relative aspect-[4/5] w-60 max-w-[70vw] cursor-grab overflow-hidden border-2 border-accent/80 bg-background shadow-lg active:cursor-grabbing sm:w-80"
           >
             {/* Guide overlay grid */}
             <div className="pointer-events-none absolute inset-0 z-20 grid grid-cols-3 grid-rows-3 border border-accent/20">
@@ -203,6 +203,7 @@ export function ImageCropperModal({
             {/* Image to pan and zoom */}
             <img
               ref={imageRef}
+              crossOrigin="anonymous"
               src={imageSrc}
               alt="Crop target"
               draggable={false}

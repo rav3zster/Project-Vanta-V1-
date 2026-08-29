@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { brand } from "./config/brand";
 import { useAuth } from "./lib/auth";
 import { useSite } from "./lib/site";
-import { api } from "./lib/supabase";
+import { api, type Player } from "./lib/supabase";
 import { navigate } from "./lib/router";
 import { StatusChip, SectionHeader, Mono, PlayerCard } from "./components/ui";
 import { Bracket } from "./components/Bracket";
+import { PlayerDossier } from "./components/PlayerDossier";
 
 const primary =
   "bg-accent px-6 py-3 font-mono text-xs font-bold tracking-[0.15em] text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-40";
@@ -15,10 +16,10 @@ const ghost =
 function PageHead({ kicker, title, sub }: { kicker: string; title: string; sub?: string }) {
   return (
     <div className="border-b border-border bg-surface/30">
-      <div className="mx-auto max-w-7xl px-5 py-16">
-        <Mono className="text-accent">{kicker}</Mono>
-        <h1 className="mt-3 font-display text-5xl font-black tracking-tight uppercase sm:text-7xl">{title}</h1>
-        {sub && <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted">{sub}</p>}
+      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-5 sm:py-16">
+        <Mono className="text-accent text-[10px] sm:text-xs">{kicker}</Mono>
+        <h1 className="mt-2 sm:mt-3 font-display text-4xl sm:text-6xl md:text-7xl font-black tracking-tight uppercase">{title}</h1>
+        {sub && <p className="mt-3 sm:mt-4 max-w-xl text-xs sm:text-sm leading-relaxed text-muted">{sub}</p>}
       </div>
     </div>
   );
@@ -257,6 +258,7 @@ export function TeamsPage() {
 export function RosterPage() {
   const { data } = useSite();
   const [activeGame, setActiveGame] = useState<string>("ALL");
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
 
   const roster = data.roster ?? [];
   const games = ["ALL", ...Array.from(new Set(roster.map((p) => p.game).filter(Boolean))) as string[]];
@@ -272,6 +274,16 @@ export function RosterPage() {
     return isNaN(num) ? acc : acc + num;
   }, 0);
 
+  const handleSelectGame = (g: string) => {
+    setActiveGame(g);
+    setSelectedPlayer(null);
+  };
+
+  // When a player is selected, find the other players in the currently filtered game
+  const otherPlayers = selectedPlayer
+    ? filtered.filter((p) => p.handle !== selectedPlayer.handle)
+    : [];
+
   return (
     <>
       <PageHead
@@ -279,9 +291,9 @@ export function RosterPage() {
         title="Roster"
         sub={`The ${brand.organizationName} elite competitive lineup across titles.`}
       />
-      <section className="mx-auto max-w-7xl px-5 py-12">
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-5 sm:py-12">
         {/* Organization Showcase Stats Bar */}
-        <div className="mb-10 grid gap-4 border border-border bg-surface p-6 sm:grid-cols-3">
+        <div className="mb-8 grid gap-4 border border-border bg-surface p-5 sm:p-6 sm:grid-cols-3">
           <div>
             <Mono className="text-[10px]">TOTAL EARNINGS</Mono>
             <div className="mt-1 font-display text-3xl font-black text-accent">
@@ -308,30 +320,112 @@ export function RosterPage() {
 
         {/* Game Filter Tabs */}
         {games.length > 1 && (
-          <div className="mb-8 flex flex-wrap items-center gap-2 border-b border-border pb-4">
-            <span className="mr-2 font-mono text-[10px] tracking-[0.2em] text-muted">FILTER TITLE:</span>
-            {games.map((g) => (
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="mr-2 font-mono text-[10px] tracking-[0.2em] text-muted">FILTER TITLE:</span>
+              {games.map((g) => (
+                <button
+                  key={g}
+                  onClick={() => handleSelectGame(g)}
+                  className={`border px-3 py-1.5 font-mono text-[11px] tracking-[0.15em] transition-colors ${
+                    activeGame === g
+                      ? "border-accent bg-accent/10 font-bold text-accent"
+                      : "border-border text-muted hover:border-border-strong hover:text-foreground"
+                  }`}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+
+            {/* Hint or Close Indicator when in single-game view */}
+            {activeGame !== "ALL" && selectedPlayer && (
               <button
-                key={g}
-                onClick={() => setActiveGame(g)}
-                className={`border px-3 py-1.5 font-mono text-[11px] tracking-[0.15em] transition-colors ${
-                  activeGame === g
-                    ? "border-accent bg-accent/10 font-bold text-accent"
-                    : "border-border text-muted hover:border-border-strong hover:text-foreground"
-                }`}
+                onClick={() => setSelectedPlayer(null)}
+                className="flex items-center gap-1.5 border border-danger/40 px-3 py-1 font-mono text-[11px] tracking-[0.1em] text-danger hover:bg-danger/10 transition-colors"
               >
-                {g}
+                <span>✕ CLOSE DOSSIER</span>
               </button>
-            ))}
+            )}
           </div>
         )}
 
+        {/* Player Section */}
         {filtered.length === 0 ? (
           <Empty label="NO PLAYERS IN THIS CATEGORY" />
+        ) : activeGame !== "ALL" && selectedPlayer ? (
+          /* Active Game Inspector Mode: Selected Card + Gathered Cards on Left, Dossier on Right */
+          <div className="grid gap-6 lg:grid-cols-[320px_1fr] items-start">
+            {/* Left Column: Selected Card on Top + Other Players Gathered Below */}
+            <div className="space-y-4">
+              <div className="transition-all duration-300">
+                <PlayerCard
+                  p={selectedPlayer}
+                  isSelected
+                  onClick={() => setSelectedPlayer(null)}
+                />
+              </div>
+
+              {/* Gathered Remaining Cards Below */}
+              {otherPlayers.length > 0 && (
+                <div className="border border-border bg-surface/50 p-4 space-y-3">
+                  <div className="flex items-center justify-between border-b border-border/70 pb-2">
+                    <Mono className="text-[10px] text-muted">
+                      OTHER {activeGame} OPERATORS ({otherPlayers.length})
+                    </Mono>
+                    <span className="font-mono text-[9px] text-accent">CLICK TO SWITCH</span>
+                  </div>
+                  <div className="space-y-2">
+                    {otherPlayers.map((op) => (
+                      <button
+                        key={op.handle}
+                        onClick={() => setSelectedPlayer(op)}
+                        className="group flex w-full cursor-pointer items-center gap-3 border border-border bg-background/80 p-2.5 text-left transition-all duration-200 hover:border-accent/80 hover:bg-surface-hover hover:translate-x-1"
+                      >
+                        <div className="relative size-11 shrink-0 overflow-hidden border border-border bg-surface">
+                          {op.image ? (
+                            <img src={op.image} alt={op.handle} className="size-full object-cover" />
+                          ) : (
+                            <div className="flex size-full items-center justify-center font-display font-black text-xs text-border-strong">
+                              {(op.handle || "?").slice(0, 2)}
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-display text-sm font-black text-foreground group-hover:text-accent transition-colors">
+                              {op.handle}
+                            </span>
+                            <span className="font-mono text-[9px] text-accent">
+                              {op.role}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-muted truncate">{op.name}</div>
+                        </div>
+                        <span className="font-mono text-xs text-muted group-hover:text-accent transition-colors">
+                          →
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column: Player Dossier */}
+            <div className="min-w-0">
+              <PlayerDossier player={selectedPlayer} onClose={() => setSelectedPlayer(null)} />
+            </div>
+          </div>
         ) : (
+          /* Standard Card Grid (When ALL is active or no specific player is clicked) */
           <div className="grid gap-px border border-border bg-border sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {filtered.map((p) => (
-              <PlayerCard key={p.handle} p={p} />
+              <PlayerCard
+                key={p.handle}
+                p={p}
+                onClick={activeGame !== "ALL" ? () => setSelectedPlayer(p) : undefined}
+              />
             ))}
           </div>
         )}

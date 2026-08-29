@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../lib/auth";
+import { useSite } from "../lib/site";
 import { api, type Player } from "../lib/supabase";
 import { StatusChip, Mono } from "./ui";
 import { Bracket } from "./Bracket";
@@ -22,6 +23,7 @@ type Tab = "OPERATIONS" | "REGISTRATIONS" | "ROSTER" | "USERS" | "ANNOUNCEMENTS"
 
 export function Control({ onClose }: { onClose: () => void }) {
   const { profile, effectiveRole, availablePerspectives, setPerspective, can, logout } = useAuth();
+  const { refresh: refreshSite } = useSite();
   const [tab, setTab] = useState<Tab>("OPERATIONS");
   const [t, setT] = useState<any>(null);
   const [feed, setFeed] = useState<{ msg: string; kind: "ok" | "err" }[]>([]);
@@ -91,15 +93,15 @@ export function Control({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-[90] overflow-y-auto bg-background">
-      <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-4 border-b border-border bg-surface px-5 py-4">
-        <div className="flex items-center gap-4">
-          <span className="font-display text-lg font-black tracking-tight">CONTROL</span>
-          <Mono>OPERATIONS COMMAND CENTER</Mono>
-        </div>
+      <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface px-4 py-3 sm:px-5 sm:py-4">
         <div className="flex items-center gap-3">
+          <span className="font-display text-base sm:text-lg font-black tracking-tight">CONTROL</span>
+          <Mono className="hidden sm:inline text-[10px] sm:text-xs">OPERATIONS COMMAND CENTER</Mono>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Perspective Switcher for GOD & DEMI_GOD */}
           {availablePerspectives.length > 1 && (
-            <div className="flex items-center gap-1.5 border border-border bg-background px-2.5 py-1.5">
+            <div className="hidden sm:flex items-center gap-1.5 border border-border bg-background px-2.5 py-1.5">
               <span className="font-mono text-[9px] tracking-[0.15em] text-muted">VIEW AS:</span>
               {availablePerspectives.map((role) => (
                 <button
@@ -122,30 +124,31 @@ export function Control({ onClose }: { onClose: () => void }) {
           )}
 
           {profile && (
-            <div className="text-right">
+            <div className="text-right hidden sm:block">
               <div className="font-mono text-[11px] text-foreground">{profile.username}</div>
               <StatusChip status={effectiveRole === "GOD" ? "LIVE" : effectiveRole === "DEMI_GOD" ? "READY" : "SCHEDULED"} />
             </div>
           )}
-          <button onClick={() => logout()} className={btn}>LOG OUT</button>
-          <button onClick={onClose} className={primary}>EXIT →</button>
+          <button onClick={onClose} className="bg-accent px-3 py-1.5 sm:px-4 sm:py-2.5 font-mono text-[11px] font-bold tracking-[0.12em] text-accent-foreground transition-opacity hover:opacity-90">
+            EXIT ✕
+          </button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-border bg-surface/60">
-        <div className="mx-auto flex max-w-7xl gap-1 px-5">
+      <div className="border-b border-border bg-surface/60 overflow-x-auto">
+        <div className="mx-auto flex max-w-7xl gap-1 px-4 sm:px-5 min-w-max">
           {TABS.filter((x) => x.show).map((x) => (
             <button
               key={x.id}
               onClick={() => setTab(x.id)}
-              className={`relative px-4 py-3 font-mono text-[11px] tracking-[0.15em] transition-colors ${
-                tab === x.id ? "text-foreground" : "text-muted hover:text-foreground"
+              className={`relative px-3 sm:px-4 py-2.5 sm:py-3 font-mono text-[10px] sm:text-[11px] tracking-[0.15em] transition-colors shrink-0 ${
+                tab === x.id ? "text-foreground font-bold" : "text-muted hover:text-foreground"
               }`}
             >
               {x.id}
               {x.id === "REGISTRATIONS" && pendingReg > 0 && (
-                <span className="ml-2 rounded-full bg-accent px-1.5 py-0.5 text-[9px] text-accent-foreground">{pendingReg}</span>
+                <span className="ml-1.5 rounded-full bg-accent px-1.5 py-0.2 text-[8px] text-accent-foreground">{pendingReg}</span>
               )}
               {tab === x.id && <span className="absolute inset-x-0 -bottom-px h-0.5 bg-accent" />}
             </button>
@@ -153,7 +156,7 @@ export function Control({ onClose }: { onClose: () => void }) {
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-5 py-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-5 sm:py-8">
         {!t && tab !== "ROSTER" ? (
           <div className="flex flex-col items-center gap-4 border border-border bg-surface p-16 text-center">
             <Mono>NO ACTIVE OPERATION</Mono>
@@ -338,8 +341,16 @@ export function Control({ onClose }: { onClose: () => void }) {
               {tab === "ROSTER" && (
                 <RosterAdmin
                   roster={roster} busy={busy} can={can}
-                  onSave={(players) => run("Save roster", () => api.updateRoster(players),
-                    (r) => setRoster((r as any).players))}
+                  onSave={(players) =>
+                    run(
+                      "Save roster",
+                      () => api.updateRoster(players),
+                      (r) => {
+                        setRoster((r as any).players);
+                        refreshSite();
+                      },
+                    )
+                  }
                 />
               )}
 

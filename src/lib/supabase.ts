@@ -45,6 +45,34 @@ async function req<T>(path: string, init: RequestInit = {}): Promise<T> {
   return json as T;
 }
 
+export type PlayerGear = {
+  mouse?: string;
+  mousepad?: string;
+  keyboard?: string;
+  headset?: string;
+  monitor?: string;
+};
+
+export type PlayerSettings = {
+  dpi?: string;
+  sensitivity?: string;
+  edpi?: string;
+  pollingRate?: string;
+  scopedSens?: string;
+  resolution?: string;
+  crosshair?: string;
+};
+
+export type PlayerStats = {
+  kd?: string;
+  winRate?: string;
+  headshotPct?: string;
+  acs?: string;
+  trophies?: number;
+  matchesPlayed?: number;
+  signaturePick?: string;
+};
+
 export type Player = {
   handle: string;
   name: string;
@@ -54,12 +82,9 @@ export type Player = {
   winnings?: string;
   region: string;
   image?: string;
-  stats?: {
-    kd?: string;
-    winRate?: string;
-    trophies?: number;
-    matchesPlayed?: number;
-  };
+  stats?: PlayerStats;
+  gear?: PlayerGear;
+  settings?: PlayerSettings;
 };
 
 export type SiteData = {

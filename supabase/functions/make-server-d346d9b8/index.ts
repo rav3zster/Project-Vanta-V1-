@@ -233,6 +233,27 @@ app.get(`${P}/site`, async (c) => {
   });
 });
 
+app.get(`${P}/roster`, async (c) => {
+  const doc = (await kv.get("roster:main")) as any;
+  return c.json({ players: doc?.players ?? [] });
+});
+
+app.post(`${P}/roster`, async (c) => {
+  try {
+    const profile = await requireProfile(c);
+    requirePerm(profile, "roster.manage");
+    const { players } = await c.req.json();
+    if (!Array.isArray(players)) {
+      return c.json({ error: "players must be an array" }, 400);
+    }
+    await kv.set("roster:main", { players, updatedAt: new Date().toISOString() });
+    await audit(profile, "roster.updated", "roster:main", { count: players.length });
+    return c.json({ players });
+  } catch (e) {
+    return errJson(c, e);
+  }
+});
+
 app.get(`${P}/audit`, async (c) => {
   try {
     const profile = await requireProfile(c);

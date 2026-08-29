@@ -33,11 +33,14 @@ function ClassifiedBar() {
     `${data.stats.openDisputes} DISPUTE${data.stats.openDisputes === 1 ? "" : "S"} UNDER REVIEW`,
     "GLOBAL SERVERS NOMINAL",
   ];
+  // 4x duplication ensures seamless infinite looping on any display resolution
+  const fullTrack = [...items, ...items, ...items, ...items];
+
   return (
-    <div className="overflow-hidden border-b border-border bg-surface">
-      <div className="marquee-track flex w-max gap-8 py-1.5">
-        {[...items, ...items].map((tx, i) => (
-          <span key={i} className="flex items-center gap-8 font-mono text-[10px] tracking-[0.2em] text-muted">
+    <div className="overflow-hidden border-b border-border bg-surface/90 backdrop-blur-sm select-none">
+      <div className="marquee-track flex w-max gap-8 py-1.5 cursor-default">
+        {fullTrack.map((tx, i) => (
+          <span key={i} className="flex shrink-0 items-center gap-8 font-mono text-[10px] tracking-[0.2em] text-muted">
             {tx}<span className="text-accent/50">/</span>
           </span>
         ))}
@@ -48,24 +51,36 @@ function ClassifiedBar() {
 
 function Nav({ onLogin, onControl, route }: { onLogin: () => void; onControl: () => void; route: Route }) {
   const { profile, effectiveRole, availablePerspectives, setPerspective, loading, logout } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const admin = effectiveRole !== "HUMAN";
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/85 backdrop-blur-md">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
-        <button onClick={() => navigate("home")} className="flex items-baseline gap-3">
-          <span className="font-display text-xl font-black tracking-tight">{brand.publicName}</span>
+    <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-md">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-5 sm:py-4">
+        <button onClick={() => { navigate("home"); setMobileMenuOpen(false); }} className="flex items-baseline gap-2.5 sm:gap-3">
+          <span className="font-display text-lg font-black tracking-tight sm:text-xl">
+            PROJECT V<span className="bg-accent text-accent-foreground px-1 ml-0.5 inline-block text-sm sm:text-base leading-none">1</span>
+          </span>
           <Mono className="hidden sm:inline">{brand.codename}</Mono>
         </button>
+
+        {/* Desktop Navigation */}
         <nav className="hidden items-center gap-7 md:flex">
           {NAV.map((n) => (
-            <button key={n.route} onClick={() => navigate(n.route)}
-              className={`font-mono text-[11px] tracking-[0.15em] transition-colors hover:text-foreground ${route === n.route ? "text-accent" : "text-muted"}`}>
+            <button
+              key={n.route}
+              onClick={() => navigate(n.route)}
+              className={`font-mono text-[11px] tracking-[0.15em] transition-colors hover:text-foreground ${
+                route === n.route ? "text-accent font-bold" : "text-muted"
+              }`}
+            >
               {n.label}
             </button>
           ))}
         </nav>
-        <div className="flex items-center gap-2.5">
+
+        {/* Desktop Actions */}
+        <div className="hidden items-center gap-2.5 sm:flex">
           <ThemeSwitcher />
           {!loading && profile ? (
             <>
@@ -87,11 +102,17 @@ function Nav({ onLogin, onControl, route }: { onLogin: () => void; onControl: ()
                 </div>
               )}
 
-              <button onClick={() => navigate("notifications")} className="hidden border border-border px-3 py-2 font-mono text-[11px] tracking-[0.15em] text-muted transition-colors hover:border-border-strong hover:text-foreground sm:block">
+              <button
+                onClick={() => navigate("notifications")}
+                className="hidden border border-border px-3 py-2 font-mono text-[11px] tracking-[0.15em] text-muted transition-colors hover:border-border-strong hover:text-foreground md:block"
+              >
                 ALERTS
               </button>
 
-              <button onClick={() => navigate("dashboard")} className="hidden items-center gap-2 border border-border/80 bg-surface/50 px-3 py-1.5 text-left sm:flex hover:border-border-strong">
+              <button
+                onClick={() => navigate("dashboard")}
+                className="hidden items-center gap-2 border border-border/80 bg-surface/50 px-3 py-1.5 text-left md:flex hover:border-border-strong"
+              >
                 <div>
                   <div className="font-mono text-xs font-bold text-foreground">{profile.username}</div>
                   <div className="flex items-center gap-1 font-mono text-[9px] tracking-[0.15em]">
@@ -105,25 +126,182 @@ function Nav({ onLogin, onControl, route }: { onLogin: () => void; onControl: ()
                 </div>
               </button>
 
-              <button onClick={admin ? onControl : () => navigate("dashboard")} className="bg-accent px-4 py-2 font-mono text-[11px] font-bold tracking-[0.15em] text-accent-foreground transition-opacity hover:opacity-90">
+              <button
+                onClick={admin ? onControl : () => navigate("dashboard")}
+                className="bg-accent px-4 py-2 font-mono text-[11px] font-bold tracking-[0.15em] text-accent-foreground transition-opacity hover:opacity-90"
+              >
                 {admin ? "CONTROL" : "DASHBOARD"}
               </button>
-              <button onClick={() => { logout(); navigate("home"); }} className="border border-border px-3 py-2 font-mono text-[11px] tracking-[0.15em] text-muted transition-colors hover:border-danger/50 hover:text-danger">
+              <button
+                onClick={() => { logout(); navigate("home"); }}
+                className="border border-border px-3 py-2 font-mono text-[11px] tracking-[0.15em] text-muted transition-colors hover:border-danger/50 hover:text-danger"
+              >
                 LOG OUT
               </button>
             </>
           ) : (
             <>
-              <button onClick={onLogin} className="hidden border border-border px-4 py-2 font-mono text-[11px] tracking-[0.15em] text-muted transition-colors hover:border-border-strong hover:text-foreground sm:block">
+              <button
+                onClick={onLogin}
+                className="hidden border border-border px-4 py-2 font-mono text-[11px] tracking-[0.15em] text-muted transition-colors hover:border-border-strong hover:text-foreground md:block"
+              >
                 LOG IN
               </button>
-              <button onClick={onLogin} className="bg-accent px-4 py-2 font-mono text-[11px] font-bold tracking-[0.15em] text-accent-foreground transition-opacity hover:opacity-90">
+              <button
+                onClick={onLogin}
+                className="bg-accent px-4 py-2 font-mono text-[11px] font-bold tracking-[0.15em] text-accent-foreground transition-opacity hover:opacity-90"
+              >
                 ENTER PROJECT
               </button>
             </>
           )}
         </div>
+
+        {/* Mobile Header Actions (Theme + Quick Action + Hamburger Button) */}
+        <div className="flex items-center gap-2 sm:hidden">
+          <ThemeSwitcher />
+          {!loading && profile ? (
+            <button
+              onClick={admin ? onControl : () => navigate("dashboard")}
+              className="bg-accent px-2.5 py-1.5 font-mono text-[10px] font-bold tracking-[0.1em] text-accent-foreground"
+            >
+              {admin ? "CONTROL" : "DASH"}
+            </button>
+          ) : (
+            <button
+              onClick={onLogin}
+              className="bg-accent px-2.5 py-1.5 font-mono text-[10px] font-bold tracking-[0.1em] text-accent-foreground"
+            >
+              ENTER
+            </button>
+          )}
+          <button
+            onClick={() => setMobileMenuOpen((o) => !o)}
+            aria-label="Toggle navigation menu"
+            className="flex size-9 items-center justify-center border border-border bg-surface text-foreground transition-colors hover:border-accent hover:text-accent active:bg-surface-hover"
+          >
+            {mobileMenuOpen ? (
+              <span className="font-mono text-base leading-none">✕</span>
+            ) : (
+              <div className="flex flex-col gap-1 w-4">
+                <span className="h-0.5 w-full bg-foreground" />
+                <span className="h-0.5 w-full bg-foreground" />
+                <span className="h-0.5 w-full bg-foreground" />
+              </div>
+            )}
+          </button>
+        </div>
       </div>
+
+      {/* Mobile Slide-Out Drawer Navigation */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-x-0 top-[calc(100%+1px)] z-50 border-b border-border bg-surface/95 p-5 backdrop-blur-xl shadow-2xl transition-all sm:hidden max-h-[85vh] overflow-y-auto">
+          {/* User Status Bar if logged in */}
+          {!loading && profile && (
+            <div className="mb-4 border border-border bg-background/80 p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-mono text-xs font-bold text-foreground">{profile.username}</div>
+                  <div className="text-[10px] font-mono text-muted">{profile.email}</div>
+                </div>
+                <div className="text-right">
+                  <span className={`font-mono text-[10px] font-bold px-1.5 py-0.5 border ${
+                    effectiveRole === "GOD" ? "border-accent text-accent" : effectiveRole === "DEMI_GOD" ? "border-success text-success" : "border-border text-muted"
+                  }`}>
+                    {effectiveRole}
+                  </span>
+                </div>
+              </div>
+
+              {availablePerspectives.length > 1 && (
+                <div className="mt-3 flex items-center justify-between border-t border-border pt-2">
+                  <span className="font-mono text-[9px] tracking-[0.1em] text-muted">VIEW PERSPECTIVE:</span>
+                  <select
+                    value={effectiveRole}
+                    onChange={(e) => setPerspective(e.target.value as any)}
+                    className="border border-border bg-surface px-2 py-0.5 font-mono text-[10px] font-bold text-accent outline-none"
+                  >
+                    {availablePerspectives.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Navigation Links */}
+          <div className="space-y-1">
+            <div className="mb-2 font-mono text-[9px] tracking-[0.2em] text-muted">NAVIGATION</div>
+            {NAV.map((n) => (
+              <button
+                key={n.route}
+                onClick={() => {
+                  navigate(n.route);
+                  setMobileMenuOpen(false);
+                }}
+                className={`flex w-full items-center justify-between border px-3.5 py-2.5 font-mono text-xs tracking-[0.15em] transition-colors ${
+                  route === n.route
+                    ? "border-accent bg-accent/15 font-bold text-accent"
+                    : "border-border/60 bg-background/40 text-foreground hover:border-border-strong"
+                }`}
+              >
+                <span>{n.label}</span>
+                <span className="text-[10px] opacity-60">→</span>
+              </button>
+            ))}
+          </div>
+
+          {/* User Links / Controls */}
+          <div className="mt-4 space-y-2 border-t border-border pt-4">
+            {!loading && profile ? (
+              <>
+                <button
+                  onClick={() => { navigate("notifications"); setMobileMenuOpen(false); }}
+                  className="flex w-full items-center justify-between border border-border px-3.5 py-2 font-mono text-xs tracking-[0.1em] text-muted hover:text-foreground"
+                >
+                  <span>ALERTS &amp; NOTIFICATIONS</span>
+                  <span className="text-[10px]">●</span>
+                </button>
+                <button
+                  onClick={() => { navigate("profile"); setMobileMenuOpen(false); }}
+                  className="flex w-full items-center justify-between border border-border px-3.5 py-2 font-mono text-xs tracking-[0.1em] text-muted hover:text-foreground"
+                >
+                  <span>PROFILE SETTINGS</span>
+                  <span className="text-[10px]">⚙</span>
+                </button>
+                <button
+                  onClick={() => {
+                    logout();
+                    navigate("home");
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full border border-danger/40 py-2.5 text-center font-mono text-xs font-bold tracking-[0.15em] text-danger hover:bg-danger/10"
+                >
+                  LOG OUT
+                </button>
+              </>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => { onLogin(); setMobileMenuOpen(false); }}
+                  className="border border-border py-2.5 text-center font-mono text-xs font-bold tracking-[0.15em] text-foreground hover:bg-surface-hover"
+                >
+                  LOG IN
+                </button>
+                <button
+                  onClick={() => { onLogin(); setMobileMenuOpen(false); }}
+                  className="bg-accent py-2.5 text-center font-mono text-xs font-bold tracking-[0.15em] text-accent-foreground"
+                >
+                  REGISTER
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 }
@@ -134,37 +312,37 @@ function Hero() {
   const s = data.stats;
   return (
     <section className="grain relative overflow-hidden border-b border-border">
-      <div className="relative z-10 mx-auto grid max-w-7xl gap-10 px-5 py-20 lg:grid-cols-[1.4fr_1fr] lg:py-28">
+      <div className="relative z-10 mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-5 sm:py-20 lg:grid-cols-[1.4fr_1fr] lg:py-28">
         <div>
-          <div className="mb-6 flex items-center gap-3">
+          <div className="mb-4 sm:mb-6 flex items-center gap-2.5 sm:gap-3">
             <span className="status-pulse inline-block size-2 rounded-full bg-accent" />
-            <Mono className="text-accent">{t ? `LIVE OPERATION // ${t.name}` : "OPERATIONS TERMINAL"}</Mono>
+            <Mono className="text-accent text-[10px] sm:text-xs">{t ? `LIVE OPERATION // ${t.name}` : "OPERATIONS TERMINAL"}</Mono>
           </div>
           <h1 className="font-display text-[15vw] leading-[0.82] font-black tracking-tighter uppercase sm:text-8xl lg:text-9xl">
-            PROJECT<br /><span className="text-accent">V1</span>
+            PROJECT<br /><span className="text-accent">V</span><span className="bg-accent text-accent-foreground px-1.5 sm:px-2.5 ml-1 inline-block">1</span>
           </h1>
-          <div className="mt-8 flex flex-wrap gap-x-4 gap-y-1">
+          <div className="mt-6 sm:mt-8 flex flex-wrap gap-x-3 sm:gap-x-4 gap-y-1">
             {brand.tagline.map((tg) => (
-              <span key={tg} className="font-display text-lg font-bold tracking-wide sm:text-2xl">{tg}</span>
+              <span key={tg} className="font-display text-base font-bold tracking-wide sm:text-2xl">{tg}</span>
             ))}
           </div>
-          <p className="mt-6 max-w-md text-sm leading-relaxed text-muted">
+          <p className="mt-4 sm:mt-6 max-w-md text-xs sm:text-sm leading-relaxed text-muted">
             An esports operating platform. Registration, check-in, seeding, brackets and live match
             operations — run a real tournament without spreadsheets.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <button onClick={() => navigate("tournaments")} className="bg-accent px-6 py-3 font-mono text-xs font-bold tracking-[0.15em] text-accent-foreground transition-opacity hover:opacity-90">
+          <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3">
+            <button onClick={() => navigate("tournaments")} className="bg-accent px-6 py-3 font-mono text-xs font-bold tracking-[0.15em] text-accent-foreground transition-opacity hover:opacity-90 text-center">
               VIEW TOURNAMENTS
             </button>
-            <button onClick={() => navigate("register")} className="border border-border-strong px-6 py-3 font-mono text-xs tracking-[0.15em] text-foreground transition-colors hover:bg-surface-hover">
+            <button onClick={() => navigate("register")} className="border border-border-strong px-6 py-3 font-mono text-xs tracking-[0.15em] text-foreground transition-colors hover:bg-surface-hover text-center">
               REGISTER TEAM
             </button>
           </div>
         </div>
 
-        <div className="flex flex-col justify-between border border-border bg-surface/60 p-5">
+        <div className="flex flex-col justify-between border border-border bg-surface/60 p-4 sm:p-5">
           <div className="flex items-center justify-between border-b border-border pb-3">
-            <Mono>SYSTEM STATUS</Mono>
+            <Mono className="text-[10px] sm:text-xs">SYSTEM STATUS</Mono>
             <StatusChip status={t ? "LIVE" : "SCHEDULED"} />
           </div>
           <dl className="my-4 space-y-3">
@@ -176,13 +354,14 @@ function Hero() {
               ["OPEN DISPUTES", s.openDisputes],
             ].map(([k, v]) => (
               <div key={k as string} className="flex items-center justify-between">
-                <dt className="font-mono text-[11px] tracking-[0.1em] text-muted">{k}</dt>
-                <dd className="font-display text-2xl font-extrabold tabular-nums">{v}</dd>
+                <dt className="font-mono text-[10px] sm:text-[11px] tracking-[0.1em] text-muted">{k}</dt>
+                <dd className="font-display text-xl sm:text-2xl font-extrabold tabular-nums">{v}</dd>
               </div>
             ))}
           </dl>
-          <div className="border-t border-border pt-3">
-            <Mono>{t?.id ?? "NO OPERATION"} · UPTIME 99.98%</Mono>
+          <div className="border-t border-border pt-3 font-mono text-[9px] sm:text-[10px] text-muted flex items-center justify-between">
+            <span>{t?.id ?? "TRN-0001"}</span>
+            <span>UPTIME 99.98%</span>
           </div>
         </div>
       </div>

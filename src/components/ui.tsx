@@ -56,9 +56,26 @@ export function Mono({ children, className = "" }: { children: ReactNode; classN
   );
 }
 
-export function PlayerCard({ p }: { p: Player }) {
+export function PlayerCard({
+  p,
+  onClick,
+  isSelected,
+}: {
+  p: Player;
+  onClick?: () => void;
+  isSelected?: boolean;
+}) {
   return (
-    <div className="group relative flex flex-col border border-border bg-surface transition-all duration-300 hover:border-accent/50 hover:bg-surface-hover">
+    <div
+      onClick={onClick}
+      className={`group relative flex flex-col border bg-surface transition-all duration-300 ${
+        onClick ? "cursor-pointer select-none" : ""
+      } ${
+        isSelected
+          ? "border-accent shadow-[0_0_25px_rgba(214,255,46,0.15)] ring-1 ring-accent bg-surface-secondary"
+          : "border-border hover:border-accent/60 hover:bg-surface-hover"
+      }`}
+    >
       <div className="grain relative aspect-[4/5] w-full overflow-hidden border-b border-border bg-[#0a0b0d]">
         {p.image ? (
           <>
@@ -66,7 +83,7 @@ export function PlayerCard({ p }: { p: Player }) {
               src={p.image}
               alt={`${p.handle} — ${p.name}`}
               loading="lazy"
-              className="size-full object-cover grayscale transition-all duration-500 group-hover:scale-105 group-hover:grayscale-0"
+              className="size-full object-cover transition-all duration-500 group-hover:scale-105"
             />
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-background/80 via-background/20 to-transparent" />
           </>
@@ -103,10 +120,16 @@ export function PlayerCard({ p }: { p: Player }) {
           </div>
           <div className="text-sm text-muted">{p.name}</div>
         </div>
-        {p.winnings && (
-          <div className="mt-4 flex items-center justify-between border-t border-border/80 pt-3">
-            <span className="font-mono text-[10px] tracking-[0.15em] text-muted">EARNINGS</span>
-            <span className="font-mono text-xs font-bold text-accent">{p.winnings}</span>
+
+        <div className="mt-4 flex items-center justify-between border-t border-border/80 pt-3">
+          <span className="font-mono text-[10px] tracking-[0.15em] text-muted">EARNINGS</span>
+          <span className="font-mono text-xs font-bold text-accent">{p.winnings || "$0"}</span>
+        </div>
+
+        {onClick && (
+          <div className="mt-2.5 flex items-center justify-between border-t border-border/40 pt-2 font-mono text-[9px] tracking-[0.15em] text-muted transition-colors group-hover:text-accent">
+            <span>{isSelected ? "● ACTIVE SELECTION" : "VIEW STATS & GEAR"}</span>
+            <span>{isSelected ? "←" : "→"}</span>
           </div>
         )}
       </div>

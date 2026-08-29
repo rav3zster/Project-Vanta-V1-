@@ -47,8 +47,9 @@ function ClassifiedBar() {
 }
 
 function Nav({ onLogin, onControl, route }: { onLogin: () => void; onControl: () => void; route: Route }) {
-  const { profile, loading, logout } = useAuth();
-  const admin = profile && profile.role !== "HUMAN";
+  const { profile, effectiveRole, availablePerspectives, setPerspective, loading, logout } = useAuth();
+  const admin = effectiveRole !== "HUMAN";
+
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/85 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
@@ -64,17 +65,46 @@ function Nav({ onLogin, onControl, route }: { onLogin: () => void; onControl: ()
             </button>
           ))}
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <ThemeSwitcher />
           {!loading && profile ? (
             <>
+              {/* Role Perspective Selector for GOD / DEMI_GOD */}
+              {availablePerspectives.length > 1 && (
+                <div className="hidden items-center gap-1 border border-border bg-surface px-2 py-1 lg:flex">
+                  <span className="font-mono text-[9px] tracking-[0.1em] text-muted">PERSPECTIVE:</span>
+                  <select
+                    value={effectiveRole}
+                    onChange={(e) => setPerspective(e.target.value as any)}
+                    className="bg-transparent font-mono text-[10px] font-bold tracking-[0.1em] text-accent outline-none cursor-pointer"
+                  >
+                    {availablePerspectives.map((r) => (
+                      <option key={r} value={r} className="bg-surface text-foreground">
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <button onClick={() => navigate("notifications")} className="hidden border border-border px-3 py-2 font-mono text-[11px] tracking-[0.15em] text-muted transition-colors hover:border-border-strong hover:text-foreground sm:block">
                 ALERTS
               </button>
-              <button onClick={() => navigate("dashboard")} className="hidden text-right sm:block">
-                <div className="font-mono text-[11px] text-foreground">{profile.username}</div>
-                <div className="font-mono text-[9px] tracking-[0.15em] text-accent">{profile.role}</div>
+
+              <button onClick={() => navigate("dashboard")} className="hidden items-center gap-2 border border-border/80 bg-surface/50 px-3 py-1.5 text-left sm:flex hover:border-border-strong">
+                <div>
+                  <div className="font-mono text-xs font-bold text-foreground">{profile.username}</div>
+                  <div className="flex items-center gap-1 font-mono text-[9px] tracking-[0.15em]">
+                    <span className={effectiveRole === "GOD" ? "text-accent font-bold" : effectiveRole === "DEMI_GOD" ? "text-success font-bold" : "text-muted"}>
+                      {effectiveRole}
+                    </span>
+                    {effectiveRole !== profile.role && (
+                      <span className="text-[8px] text-border-strong">({profile.role})</span>
+                    )}
+                  </div>
+                </div>
               </button>
+
               <button onClick={admin ? onControl : () => navigate("dashboard")} className="bg-accent px-4 py-2 font-mono text-[11px] font-bold tracking-[0.15em] text-accent-foreground transition-opacity hover:opacity-90">
                 {admin ? "CONTROL" : "DASHBOARD"}
               </button>

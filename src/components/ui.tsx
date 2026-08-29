@@ -58,14 +58,14 @@ export function Mono({ children, className = "" }: { children: ReactNode; classN
 
 export function PlayerCard({ p }: { p: Player }) {
   return (
-    <div className="group relative flex flex-col bg-surface transition-colors hover:bg-surface-hover">
+    <div className="group relative flex flex-col border border-border bg-surface transition-all duration-300 hover:border-accent/50 hover:bg-surface-hover">
       <div className="grain relative aspect-[4/5] overflow-hidden border-b border-border bg-surface-secondary">
         {p.image ? (
           <img
             src={p.image}
             alt={`${p.handle} — ${p.name}`}
             loading="lazy"
-            className="size-full object-cover grayscale transition-all duration-500 group-hover:grayscale-0"
+            className="size-full object-cover grayscale transition-all duration-500 group-hover:scale-105 group-hover:grayscale-0"
           />
         ) : (
           <div className="flex size-full items-center justify-center">
@@ -74,14 +74,38 @@ export function PlayerCard({ p }: { p: Player }) {
             </span>
           </div>
         )}
-        <span className="absolute left-3 top-3 z-10 border border-accent/40 bg-background/70 px-2 py-0.5 font-mono text-[10px] tracking-[0.15em] text-accent backdrop-blur-sm">
-          {p.role}
-        </span>
+        <div className="absolute left-3 top-3 z-10 flex flex-wrap gap-1.5">
+          {p.game && (
+            <span className="border border-border-strong bg-background/80 px-2 py-0.5 font-mono text-[9px] font-bold tracking-[0.15em] text-foreground backdrop-blur-sm">
+              {p.game}
+            </span>
+          )}
+          <span className="border border-accent/40 bg-background/80 px-2 py-0.5 font-mono text-[9px] tracking-[0.15em] text-accent backdrop-blur-sm">
+            {p.role}
+          </span>
+        </div>
+        {p.rank && (
+          <div className="absolute bottom-3 left-3 right-3 z-10">
+            <span className="inline-block border border-border bg-background/90 px-2 py-1 font-mono text-[10px] tracking-[0.1em] text-foreground backdrop-blur-sm">
+              <span className="text-accent">◆ </span>{p.rank}
+            </span>
+          </div>
+        )}
       </div>
-      <div className="relative z-10 p-5">
-        <div className="font-display text-2xl font-black tracking-tight">{p.handle}</div>
-        <div className="text-sm text-muted">{p.name}</div>
-        <div className="mt-3"><Mono>{p.region}</Mono></div>
+      <div className="relative z-10 flex flex-1 flex-col justify-between p-5">
+        <div>
+          <div className="flex items-baseline justify-between gap-2">
+            <h3 className="font-display text-2xl font-black tracking-tight">{p.handle}</h3>
+            <Mono className="text-[10px]">{p.region}</Mono>
+          </div>
+          <div className="text-sm text-muted">{p.name}</div>
+        </div>
+        {p.winnings && (
+          <div className="mt-4 flex items-center justify-between border-t border-border/80 pt-3">
+            <span className="font-mono text-[10px] tracking-[0.15em] text-muted">EARNINGS</span>
+            <span className="font-mono text-xs font-bold text-accent">{p.winnings}</span>
+          </div>
+        )}
       </div>
     </div>
   );

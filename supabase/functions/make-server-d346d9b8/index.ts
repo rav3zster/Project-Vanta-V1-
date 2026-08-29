@@ -276,14 +276,19 @@ app.post(`${P}/seed`, async (c) => {
       ],
     );
 
-    // House roster.
-    await kv.set("roster:main", { players: [
-      { handle: "SPECTRE", name: "A. Reyes", role: "DUELIST", region: "APAC" },
-      { handle: "VIGIL", name: "K. Novak", role: "SENTINEL", region: "EU" },
-      { handle: "OMEN", name: "D. Okafor", role: "CONTROLLER", region: "NA" },
-      { handle: "RELAY", name: "S. Tanaka", role: "INITIATOR", region: "APAC" },
-      { handle: "WARDEN", name: "L. Costa", role: "IGL", region: "SA" },
-    ] });
+    // House roster across top esports titles.
+    await kv.set("roster:main", {
+      players: [
+        { handle: "TITAN", name: "Rave Ends", role: "IGL / CARRY", game: "DOTA 2", rank: "Rank 1 Immortal", winnings: "$110,000", region: "GLOBAL", image: "https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=600&auto=format&fit=crop&q=80" },
+        { handle: "VORTEX", name: "Marcus Vance", role: "AWPER / IGL", game: "CS2", rank: "Global Elite · 28k ELO", winnings: "$75,000", region: "NA", image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=80" },
+        { handle: "SPECTRE", name: "Anthony Reyes", role: "DUELIST", game: "VALORANT", rank: "Radiant #1", winnings: "$45,000", region: "APAC", image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&auto=format&fit=crop&q=80" },
+        { handle: "APEX", name: "Shin Tanaka", role: "MID LANER", game: "LEAGUE OF LEGENDS", rank: "Challenger 980 LP", winnings: "$60,000", region: "APAC", image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600&auto=format&fit=crop&q=80" },
+        { handle: "VIGIL", name: "Katarina Novak", role: "SENTINEL", game: "VALORANT", rank: "Radiant #4", winnings: "$32,000", region: "EU", image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&auto=format&fit=crop&q=80" },
+        { handle: "REAPER", name: "Erik Lindholm", role: "ENTRY FRAGGER", game: "CS2", rank: "Global Elite", winnings: "$50,000", region: "EU", image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=600&auto=format&fit=crop&q=80" },
+        { handle: "HYPERION", name: "Lucas Costa", role: "CARRY (ADC)", game: "LEAGUE OF LEGENDS", rank: "Challenger 850 LP", winnings: "$40,000", region: "SA", image: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=600&auto=format&fit=crop&q=80" },
+        { handle: "PHANTOM", name: "Nikhil Varma", role: "MIDLANER", game: "DOTA 2", rank: "Top 50 Immortal", winnings: "$85,000", region: "APAC", image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600&auto=format&fit=crop&q=80" },
+      ],
+    });
 
     await kv.set(`announcement:${now}`, {
       id: "ANN-SEED", title: "REQUIEM OPEN registration is live",
@@ -319,15 +324,15 @@ app.post(`${P}/ops/:action`, async (c) => {
 // ---- Notifications & announcements routes -----------------------------------
 
 app.get(`${P}/notifications`, async (c) => {
-  const items = await kv.getByPrefix("notif:");
-  items.sort((a: any, b: any) => (a.ts < b.ts ? 1 : -1));
-  return c.json({ notifications: items.slice(0, 50) });
+  const notifs = await kv.getByPrefix("notif:");
+  notifs.sort((a: any, b: any) => (a.ts < b.ts ? 1 : -1));
+  return c.json({ notifications: notifs.slice(0, 30) });
 });
 
 app.get(`${P}/announcements`, async (c) => {
-  const items = await kv.getByPrefix("announcement:");
-  items.sort((a: any, b: any) => (a.ts < b.ts ? 1 : -1));
-  return c.json({ announcements: items });
+  const list = await kv.getByPrefix("announcement:");
+  list.sort((a: any, b: any) => (a.ts < b.ts ? 1 : -1));
+  return c.json({ announcements: list });
 });
 
 app.post(`${P}/announcements`, async (c) => {
@@ -335,10 +340,10 @@ app.post(`${P}/announcements`, async (c) => {
     const profile = await requireProfile(c);
     requirePerm(profile, "announcements.publish");
     const { title, body, severity } = await c.req.json();
-    if (!title || !body) return c.json({ error: "title and body required" }, 400);
+    if (!title || !body) return c.json({ error: "title and body are required" }, 400);
     const ts = new Date().toISOString();
     const ann = {
-      id: `ANN-${Date.now()}`, title, body, severity: severity ?? "INFO",
+      id: `ann:${ts}`, title, body, severity: severity ?? "INFO",
       author: profile.username, ts, status: "PUBLISHED",
     };
     await kv.set(`announcement:${ts}`, ann);
@@ -350,17 +355,15 @@ app.post(`${P}/announcements`, async (c) => {
   }
 });
 
-// ---- Roster -----------------------------------------------------------------
+// ---- Roster management (GOD & DEMI_GOD) -------------------------------------
 
 const ROSTER_KEY = "roster:main";
 
 app.get(`${P}/roster`, async (c) => {
-  const doc = (await kv.get(ROSTER_KEY)) as any;
+  const doc: any = await kv.get(ROSTER_KEY);
   return c.json({ players: doc?.players ?? [] });
 });
 
-// Full-document replace of the house roster. Admin-managed: add/remove players,
-// change roles, regions and images. Every save is permission-gated and audited.
 app.post(`${P}/roster`, async (c) => {
   try {
     const profile = await requireProfile(c);
@@ -371,8 +374,12 @@ app.post(`${P}/roster`, async (c) => {
       handle: String(p.handle ?? "").toUpperCase().trim(),
       name: String(p.name ?? "").trim(),
       role: String(p.role ?? "").toUpperCase().trim(),
+      game: String(p.game ?? "VALORANT").toUpperCase().trim(),
+      rank: String(p.rank ?? "").trim(),
+      winnings: String(p.winnings ?? "").trim(),
       region: String(p.region ?? "GLOBAL").toUpperCase().trim(),
       image: p.image ? String(p.image).trim() : "",
+      stats: p.stats ?? {},
     })).filter((p: any) => p.handle);
     await kv.set(ROSTER_KEY, { players: clean });
     await audit(profile, "roster.updated", ROSTER_KEY, { count: clean.length });
@@ -382,7 +389,7 @@ app.post(`${P}/roster`, async (c) => {
   }
 });
 
-// ---- Users & roles ----------------------------------------------------------
+// ---- Users & roles (GOD & DEMI_GOD management) ------------------------------
 
 app.get(`${P}/users`, async (c) => {
   try {
@@ -403,7 +410,10 @@ app.post(`${P}/users/role`, async (c) => {
     const target: Profile | undefined = await kv.get(`user:${userId}`);
     if (!target) return c.json({ error: "User not found" }, 404);
 
-    // Guard: never remove the last GOD via the UI.
+    if (isFounder(target.username, target.email) && role !== "GOD") {
+      return c.json({ error: "Founding account must remain GOD" }, 409);
+    }
+
     if (target.role === "GOD" && role !== "GOD") {
       const users: Profile[] = await kv.getByPrefix("user:");
       const gods = users.filter((u) => u.role === "GOD");
@@ -412,8 +422,40 @@ app.post(`${P}/users/role`, async (c) => {
     const before = target.role;
     target.role = role;
     await kv.set(`user:${userId}`, target);
-    await audit(profile, "role.changed", userId, { from: before, to: role });
+    await audit(profile, "role.changed", userId, { from: before, to: role, email: target.email });
     return c.json({ profile: target });
+  } catch (e) {
+    return errJson(c, e);
+  }
+});
+
+app.post(`${P}/users/role-by-email`, async (c) => {
+  try {
+    const profile = await requireProfile(c);
+    requirePerm(profile, "roles.manage");
+    const { email, role } = await c.req.json();
+    if (!email) return c.json({ error: "email is required" }, 400);
+
+    const targetEmail = String(email).toLowerCase().trim();
+    if (isFounder(undefined, targetEmail) && role !== "GOD") {
+      return c.json({ error: "Founding account must remain GOD" }, 409);
+    }
+
+    const allUsers: Profile[] = await kv.getByPrefix("user:");
+    const found = allUsers.find((u) => u.email?.toLowerCase().trim() === targetEmail);
+
+    if (found) {
+      const before = found.role;
+      found.role = role;
+      await kv.set(`user:${found.id}`, found);
+      await audit(profile, "role.assigned_email", found.id, { email: targetEmail, from: before, to: role });
+      return c.json({ profile: found });
+    }
+
+    // Provision an entry keyed by email so when they sign in, role is mapped
+    await kv.set(`role-override:${targetEmail}`, { email: targetEmail, role });
+    await audit(profile, "role.preassigned_email", targetEmail, { email: targetEmail, role });
+    return c.json({ message: `Role ${role} pre-assigned to ${targetEmail}`, email: targetEmail, role });
   } catch (e) {
     return errJson(c, e);
   }

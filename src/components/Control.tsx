@@ -18,7 +18,7 @@ const primary =
 type Tab = "OPERATIONS" | "REGISTRATIONS" | "ROSTER" | "USERS" | "ANNOUNCEMENTS" | "AUDIT";
 
 export function Control({ onClose }: { onClose: () => void }) {
-  const { profile, can, logout } = useAuth();
+  const { profile, effectiveRole, availablePerspectives, setPerspective, can, logout } = useAuth();
   const [tab, setTab] = useState<Tab>("OPERATIONS");
   const [t, setT] = useState<any>(null);
   const [feed, setFeed] = useState<{ msg: string; kind: "ok" | "err" }[]>([]);
@@ -88,16 +88,40 @@ export function Control({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-[90] overflow-y-auto bg-background">
-      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-surface px-5 py-4">
+      <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-4 border-b border-border bg-surface px-5 py-4">
         <div className="flex items-center gap-4">
           <span className="font-display text-lg font-black tracking-tight">CONTROL</span>
           <Mono>OPERATIONS COMMAND CENTER</Mono>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          {/* Perspective Switcher for GOD & DEMI_GOD */}
+          {availablePerspectives.length > 1 && (
+            <div className="flex items-center gap-1.5 border border-border bg-background px-2.5 py-1.5">
+              <span className="font-mono text-[9px] tracking-[0.15em] text-muted">VIEW AS:</span>
+              {availablePerspectives.map((role) => (
+                <button
+                  key={role}
+                  onClick={() => setPerspective(role)}
+                  className={`border px-2 py-0.5 font-mono text-[10px] font-bold tracking-[0.1em] transition-colors ${
+                    effectiveRole === role
+                      ? role === "GOD"
+                        ? "border-accent bg-accent/20 text-accent"
+                        : role === "DEMI_GOD"
+                        ? "border-success bg-success/20 text-success"
+                        : "border-foreground bg-foreground text-background"
+                      : "border-transparent text-muted hover:text-foreground"
+                  }`}
+                >
+                  {role}
+                </button>
+              ))}
+            </div>
+          )}
+
           {profile && (
             <div className="text-right">
               <div className="font-mono text-[11px] text-foreground">{profile.username}</div>
-              <StatusChip status={profile.role === "GOD" ? "LIVE" : profile.role === "DEMI_GOD" ? "READY" : "SCHEDULED"} />
+              <StatusChip status={effectiveRole === "GOD" ? "LIVE" : effectiveRole === "DEMI_GOD" ? "READY" : "SCHEDULED"} />
             </div>
           )}
           <button onClick={() => logout()} className={btn}>LOG OUT</button>
@@ -317,30 +341,71 @@ export function Control({ onClose }: { onClose: () => void }) {
               )}
 
               {tab === "USERS" && (
-                <div className="border border-border bg-surface p-5">
-                  <Mono>USER ROLES &amp; PERMISSIONS</Mono>
-                  <div className="mt-4 grid gap-px border border-border bg-border">
-                    {users.length === 0 && <div className="bg-surface px-4 py-3"><Mono>No users loaded.</Mono></div>}
-                    {users.map((u) => (
-                      <div key={u.id} className="flex items-center justify-between bg-surface px-4 py-3">
-                        <div>
-                          <div className="font-mono text-sm text-foreground">{u.username}</div>
-                          <Mono>{u.email} · {u.region}</Mono>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          {(["HUMAN", "DEMI_GOD", "GOD"] as const).map((r) => (
-                            <button key={r} disabled={busy || u.role === r}
-                              onClick={() => run(`Set ${u.username} → ${r}`, () => api.setUserRole({ userId: u.id, role: r }),
-                                () => setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, role: r } : x)))}
-                              className={`font-mono text-[10px] tracking-[0.1em] border px-2 py-1 transition-colors ${
-                                u.role === r ? "border-accent bg-accent/10 text-accent" : "border-border text-muted hover:text-foreground"
-                              }`}>
-                              {r}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
+                <div className="space-y-6">
+                  {/* Assign Role by Email (GOD feature) */}
+                  <div className="border border-border bg-surface p-5">
+                    <Mono>ASSIGN ROLE BY EMAIL</Mono>
+                    <p className="mt-1 text-xs text-muted">
+                      Grant DEMI_GOD or GOD privileges to any email address. Works for existing accounts or pre-assigns role for future signups.
+                    </p>
+                    <RoleByEmailForm
+                      busy={busy}
+                      onAssign={(email, role) =>
+                        run(`Assign ${email} → ${role}`, () => api.setUserRoleByEmail({ email, role }), () => load())
+                      }
+                    />
+                  </div>
+
+                  {/* Registered Users List */}
+                  <div className="border border-border bg-surface p-5">
+                    <div className="mb-4 flex items-center justify-between">
+                      <Mono>USER ROLES &amp; PERMISSIONS</Mono>
+                      <Mono>{users.length} REGISTERED OPERATOR{users.length === 1 ? "" : "S"}</Mono>
+                    </div>
+                    <div className="grid gap-px border border-border bg-border">
+                      {users.length === 0 && <div className="bg-surface px-4 py-3"><Mono>No users loaded.</Mono></div>}
+                      {users.map((u) => {
+                        const isFounderUser = (u.email ?? "").toLowerCase().trim() === "raveends70@gmail.com";
+                        return (
+                          <div key={u.id} className="flex flex-col gap-3 bg-surface px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-sm font-bold text-foreground">{u.username}</span>
+                                {isFounderUser && (
+                                  <span className="border border-accent bg-accent/10 px-1.5 py-0.5 font-mono text-[9px] font-bold text-accent">
+                                    FOUNDER
+                                  </span>
+                                )}
+                              </div>
+                              <Mono>{u.email} · {u.region}</Mono>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              {(["HUMAN", "DEMI_GOD", "GOD"] as const).map((r) => (
+                                <button
+                                  key={r}
+                                  disabled={busy || u.role === r || (isFounderUser && r !== "GOD")}
+                                  onClick={() =>
+                                    run(`Set ${u.username} → ${r}`, () => api.setUserRole({ userId: u.id, role: r }),
+                                      () => setUsers((prev) => prev.map((x) => (x.id === u.id ? { ...x, role: r } : x))))
+                                  }
+                                  className={`font-mono text-[10px] tracking-[0.1em] border px-2.5 py-1 transition-colors ${
+                                    u.role === r
+                                      ? r === "GOD"
+                                        ? "border-accent bg-accent/15 font-bold text-accent"
+                                        : r === "DEMI_GOD"
+                                        ? "border-success bg-success/15 font-bold text-success"
+                                        : "border-border bg-surface-secondary text-foreground"
+                                      : "border-border text-muted hover:text-foreground disabled:opacity-40"
+                                  }`}
+                                >
+                                  {r}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               )}
@@ -466,8 +531,80 @@ function AnnouncementsAdmin({
   );
 }
 
-const ROLE_PRESETS = ["DUELIST", "SENTINEL", "CONTROLLER", "INITIATOR", "IGL", "FLEX", "SUB", "COACH", "ANALYST", "MANAGER"];
+const GAME_PRESETS = [
+  "VALORANT",
+  "CS2",
+  "LEAGUE OF LEGENDS",
+  "DOTA 2",
+  "APEX LEGENDS",
+  "OVERWATCH 2",
+  "ROCKET LEAGUE",
+  "RAINBOW SIX",
+];
+const ROLE_PRESETS = [
+  "DUELIST", "SENTINEL", "CONTROLLER", "INITIATOR", "IGL", "AWPER",
+  "ENTRY FRAGGER", "MID LANER", "CARRY", "SUPPORT", "OFFLANER", "FLEX",
+  "SUB", "COACH", "ANALYST", "MANAGER",
+];
 const REGION_PRESETS = ["GLOBAL", "NA", "EU", "APAC", "SA", "MENA"];
+
+function RoleByEmailForm({
+  busy,
+  onAssign,
+}: {
+  busy: boolean;
+  onAssign: (email: string, role: "GOD" | "DEMI_GOD" | "HUMAN") => void;
+}) {
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<"GOD" | "DEMI_GOD" | "HUMAN">("DEMI_GOD");
+  const input =
+    "w-full border border-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-accent placeholder:text-border-strong";
+
+  return (
+    <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+      <input
+        className={`${input} flex-1`}
+        placeholder="operator@email.com"
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <div className="flex items-center gap-1.5">
+        {(["HUMAN", "DEMI_GOD", "GOD"] as const).map((r) => (
+          <button
+            key={r}
+            type="button"
+            onClick={() => setRole(r)}
+            className={`border px-2.5 py-2 font-mono text-[10px] font-bold tracking-[0.1em] transition-colors ${
+              role === r
+                ? r === "GOD"
+                  ? "border-accent bg-accent/20 text-accent"
+                  : r === "DEMI_GOD"
+                  ? "border-success bg-success/20 text-success"
+                  : "border-foreground bg-foreground text-background"
+                : "border-border text-muted hover:text-foreground"
+            }`}
+          >
+            {r}
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        disabled={busy || !email.trim()}
+        onClick={() => {
+          if (email.trim()) {
+            onAssign(email.trim(), role);
+            setEmail("");
+          }
+        }}
+        className={`${primary} whitespace-nowrap`}
+      >
+        {busy ? "ASSIGNING…" : `ASSIGN ${role}`}
+      </button>
+    </div>
+  );
+}
 
 function RosterAdmin({
   roster, busy, can, onSave,
@@ -505,7 +642,19 @@ function RosterAdmin({
   }
   function add() {
     setDirty(true);
-    setPlayers((prev) => [...prev, { handle: "", name: "", role: "FLEX", region: "GLOBAL", image: "" }]);
+    setPlayers((prev) => [
+      ...prev,
+      {
+        handle: "",
+        name: "",
+        role: "FLEX",
+        game: "VALORANT",
+        rank: "",
+        winnings: "$0",
+        region: "GLOBAL",
+        image: "",
+      },
+    ]);
   }
 
   const canManage = can("roster.manage");
@@ -514,18 +663,18 @@ function RosterAdmin({
     <div className="border border-border bg-surface p-5">
       <div className="mb-4 flex items-center justify-between">
         <Mono>HOUSE ROSTER MANAGEMENT</Mono>
-        <Mono>{players.length} PLAYER{players.length === 1 ? "" : "S"}{dirty ? " · UNSAVED" : ""}</Mono>
+        <Mono>{players.length} OPERATOR{players.length === 1 ? "" : "S"}{dirty ? " · UNSAVED" : ""}</Mono>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {players.length === 0 && (
           <p className="font-mono text-xs text-border-strong">No players yet. Add your first operator below.</p>
         )}
         {players.map((p, i) => (
-          <div key={i} className="border border-border p-3">
-            <div className="flex gap-3">
+          <div key={i} className="border border-border p-4 bg-background/50">
+            <div className="flex flex-col gap-4 sm:flex-row">
               <div
-                className="grain relative flex size-16 shrink-0 items-center justify-center overflow-hidden border border-border-strong bg-background"
+                className="grain relative flex size-20 shrink-0 items-center justify-center overflow-hidden border border-border-strong bg-background"
                 aria-hidden="true"
               >
                 {p.image ? (
@@ -536,39 +685,91 @@ function RosterAdmin({
                   </span>
                 )}
               </div>
-              <div className="grid flex-1 gap-2 sm:grid-cols-2">
-                <input className={input} placeholder="HANDLE" value={p.handle}
-                  onChange={(e) => edit(i, { handle: e.target.value.toUpperCase() })} />
-                <input className={input} placeholder="Real name" value={p.name}
-                  onChange={(e) => edit(i, { name: e.target.value })} />
-                <input className={input} placeholder="ROLE" list="roster-roles" value={p.role}
-                  onChange={(e) => edit(i, { role: e.target.value.toUpperCase() })} />
-                <select className={input} value={REGION_PRESETS.includes(p.region) ? p.region : "GLOBAL"}
-                  onChange={(e) => edit(i, { region: e.target.value })}>
-                  {REGION_PRESETS.map((r) => <option key={r} value={r}>{r}</option>)}
+              <div className="grid flex-1 gap-2.5 sm:grid-cols-3">
+                <input
+                  className={input}
+                  placeholder="HANDLE (e.g. TITAN)"
+                  value={p.handle}
+                  onChange={(e) => edit(i, { handle: e.target.value.toUpperCase() })}
+                />
+                <input
+                  className={input}
+                  placeholder="Real Name (e.g. Rave Ends)"
+                  value={p.name}
+                  onChange={(e) => edit(i, { name: e.target.value })}
+                />
+                <input
+                  className={input}
+                  placeholder="GAME (e.g. CS2, VALORANT)"
+                  list="roster-games"
+                  value={p.game ?? ""}
+                  onChange={(e) => edit(i, { game: e.target.value.toUpperCase() })}
+                />
+                <input
+                  className={input}
+                  placeholder="ROLE (e.g. IGL / DUELIST)"
+                  list="roster-roles"
+                  value={p.role}
+                  onChange={(e) => edit(i, { role: e.target.value.toUpperCase() })}
+                />
+                <input
+                  className={input}
+                  placeholder="RANK (e.g. Global Elite, Radiant #1)"
+                  value={p.rank ?? ""}
+                  onChange={(e) => edit(i, { rank: e.target.value })}
+                />
+                <input
+                  className={input}
+                  placeholder="WINNINGS (e.g. $75,000)"
+                  value={p.winnings ?? ""}
+                  onChange={(e) => edit(i, { winnings: e.target.value })}
+                />
+                <select
+                  className={input}
+                  value={REGION_PRESETS.includes(p.region) ? p.region : "GLOBAL"}
+                  onChange={(e) => edit(i, { region: e.target.value })}
+                >
+                  {REGION_PRESETS.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
                 </select>
-                <input className={`${input} sm:col-span-2`} placeholder="Image URL (https://…)" value={p.image ?? ""}
-                  onChange={(e) => edit(i, { image: e.target.value })} />
+                <input
+                  className={`${input} sm:col-span-2`}
+                  placeholder="Image URL (https://…)"
+                  value={p.image ?? ""}
+                  onChange={(e) => edit(i, { image: e.target.value })}
+                />
               </div>
             </div>
-            <div className="mt-2 flex items-center justify-end gap-1.5">
-              <button onClick={() => move(i, -1)} disabled={i === 0}
-                className="border border-border px-2 py-1 font-mono text-[10px] text-muted hover:text-foreground disabled:opacity-30">↑</button>
-              <button onClick={() => move(i, 1)} disabled={i === players.length - 1}
-                className="border border-border px-2 py-1 font-mono text-[10px] text-muted hover:text-foreground disabled:opacity-30">↓</button>
-              <button onClick={() => remove(i)}
-                className="border border-danger/40 px-2.5 py-1 font-mono text-[10px] tracking-[0.1em] text-danger hover:bg-danger/5">REMOVE</button>
+            <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-2">
+              <div className="font-mono text-[10px] text-muted">
+                {p.game || "UNASSIGNED"} · {p.role || "FLEX"} {p.rank ? `· ${p.rank}` : ""} {p.winnings ? `· ${p.winnings}` : ""}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button onClick={() => move(i, -1)} disabled={i === 0}
+                  className="border border-border px-2 py-1 font-mono text-[10px] text-muted hover:text-foreground disabled:opacity-30">↑</button>
+                <button onClick={() => move(i, 1)} disabled={i === players.length - 1}
+                  className="border border-border px-2 py-1 font-mono text-[10px] text-muted hover:text-foreground disabled:opacity-30">↓</button>
+                <button onClick={() => remove(i)}
+                  className="border border-danger/40 px-2.5 py-1 font-mono text-[10px] tracking-[0.1em] text-danger hover:bg-danger/5">REMOVE</button>
+              </div>
             </div>
           </div>
         ))}
       </div>
+
+      <datalist id="roster-games">
+        {GAME_PRESETS.map((g) => <option key={g} value={g} />)}
+      </datalist>
 
       <datalist id="roster-roles">
         {ROLE_PRESETS.map((r) => <option key={r} value={r} />)}
       </datalist>
 
       <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
-        <button onClick={add} className={btn} disabled={!canManage}>+ ADD PLAYER</button>
+        <button onClick={add} className={btn} disabled={!canManage}>+ ADD OPERATOR</button>
         <button onClick={() => { setDirty(false); setPlayers(roster); }} disabled={!dirty}
           className={`${btn} disabled:opacity-40`}>DISCARD</button>
         <button

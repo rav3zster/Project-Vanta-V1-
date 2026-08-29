@@ -49,8 +49,17 @@ export type Player = {
   handle: string;
   name: string;
   role: string;
+  game?: string;
+  rank?: string;
+  winnings?: string;
   region: string;
   image?: string;
+  stats?: {
+    kd?: string;
+    winRate?: string;
+    trophies?: number;
+    matchesPlayed?: number;
+  };
 };
 
 export type SiteData = {
@@ -97,6 +106,11 @@ export const api = {
   getUsers: () => req<{ users: Profile[] }>("/users"),
   setUserRole: (b: { userId: string; role: Role }) =>
     req<{ user: Profile }>("/users/role", {
+      method: "POST",
+      body: JSON.stringify(b),
+    }),
+  setUserRoleByEmail: (b: { email: string; role: Role }) =>
+    req<{ user: Profile }>("/users/role-by-email", {
       method: "POST",
       body: JSON.stringify(b),
     }),

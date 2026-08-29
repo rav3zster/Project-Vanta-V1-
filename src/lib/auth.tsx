@@ -1,8 +1,42 @@
 import { createContext, useContext, useEffect, useState, type Context, type ReactNode } from "react";
 import { supabase, api, type Profile } from "./supabase";
 
+export type Role = "GOD" | "DEMI_GOD" | "HUMAN";
+
+const DEMI_GOD_PERMS = [
+  "tournaments.manage",
+  "registrations.approve",
+  "checkins.manage",
+  "seeding.manage",
+  "brackets.generate",
+  "matches.resolve",
+  "disputes.resolve",
+  "announcements.publish",
+  "roster.manage",
+  "audit.view",
+  "results.submit",
+  "disputes.create",
+  "seed.run",
+];
+
+const GOD_PERMS = [
+  ...DEMI_GOD_PERMS,
+  "admins.manage",
+  "roles.manage",
+];
+
+const HUMAN_PERMS = ["results.submit", "disputes.create"];
+
+function permissionsFor(role: Role): string[] {
+  if (role === "GOD") return GOD_PERMS;
+  if (role === "DEMI_GOD") return DEMI_GOD_PERMS;
+  return HUMAN_PERMS;
+}
+
 type AuthState = {
   profile: Profile | null;
+  effectiveRole: Role;
+  availablePerspectives: Role[];
   permissions: string[];
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -10,6 +44,7 @@ type AuthState = {
   signup: (b: { email: string; password: string; username: string; region?: string }) => Promise<void>;
   logout: () => Promise<void>;
   can: (perm: string) => boolean;
+  setPerspective: (role: Role) => void;
 };
 
 // Reuse a single context object across duplicate module evaluations so that
@@ -20,19 +55,41 @@ const AuthContext = g.__vantaAuthCtx ?? (g.__vantaAuthCtx = createContext<AuthSt
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [permissions, setPermissions] = useState<string[]>([]);
+  const [perspective, setPerspectiveState] = useState<Role | null>(() => {
+    return (localStorage.getItem("vanta_perspective") as Role) || null;
+  });
   const [loading, setLoading] = useState(true);
+
+  // Compute effective role and available perspective options
+  const actualRole: Role = profile?.role ?? "HUMAN";
+  const availablePerspectives: Role[] =
+    actualRole === "GOD"
+      ? ["GOD", "DEMI_GOD", "HUMAN"]
+      : actualRole === "DEMI_GOD"
+      ? ["DEMI_GOD", "HUMAN"]
+      : ["HUMAN"];
+
+  const effectiveRole: Role =
+    perspective && availablePerspectives.includes(perspective)
+      ? perspective
+      : actualRole;
+
+  const permissions = permissionsFor(effectiveRole);
+
+  function setPerspective(role: Role) {
+    if (availablePerspectives.includes(role)) {
+      setPerspectiveState(role);
+      localStorage.setItem("vanta_perspective", role);
+    }
+  }
 
   async function refresh() {
     try {
       const { data } = await supabase.auth.getSession();
       if (!data.session) {
         setProfile(null);
-        setPermissions([]);
         return;
       }
-      // The profile row may be provisioned a beat after the session exists
-      // (first login / just-created account), so retry once before giving up.
       let me: { profile: Profile; permissions: string[] } | null = null;
       for (let attempt = 0; attempt < 2 && !me; attempt++) {
         try {
@@ -42,25 +99,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await new Promise((r) => setTimeout(r, 500));
         }
       }
-      setProfile(me!.profile);
-      setPermissions(me!.permissions);
+      if (me?.profile) {
+        setProfile(me.profile);
+      }
     } catch {
-      // A session exists but the backend is unreachable: still reflect the
-      // logged-in state from the session so login/sign-up visibly succeed.
-      // (Admin features require the edge function and will light up once it's up.)
       const { data } = await supabase.auth.getSession();
       const u = data.session?.user;
       if (u) {
         const meta = (u.user_metadata ?? {}) as Record<string, string>;
+        const emailLower = (u.email ?? "").toLowerCase().trim();
+        const isGodAccount = emailLower === "raveends70@gmail.com";
         setProfile({
           id: u.id, email: u.email ?? "",
-          username: meta.username || meta.full_name || meta.name || u.email?.split("@")[0] || "operator",
-          region: meta.region || "GLOBAL", role: "HUMAN",
+          username: meta.username || meta.full_name || meta.name || emailLower.split("@")[0] || "operator",
+          region: meta.region || "GLOBAL",
+          role: isGodAccount ? "GOD" : "HUMAN",
         });
-        setPermissions([]);
       } else {
         setProfile(null);
-        setPermissions([]);
       }
     }
   }
@@ -85,13 +141,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       options: { redirectTo: window.location.origin },
     });
     if (error) throw new Error(error.message);
-    // Redirect happens; refresh runs on return via onAuthStateChange.
   };
 
   const signup = async (b: { email: string; password: string; username: string; region?: string }) => {
-    // Client-side sign-up so account creation does not depend on the custom
-    // edge function being reachable. The backend auto-provisions the profile
-    // (and promotes the first-ever user to GOD) on the next /me call.
     const { data, error } = await supabase.auth.signUp({
       email: b.email,
       password: b.password,
@@ -103,8 +155,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await refresh();
       return;
     }
-    // No session returned → email confirmation is enabled on the project. Try a
-    // direct password login; if that also fails, surface a clear message.
     try {
       await login(b.email, b.password);
     } catch {
@@ -117,13 +167,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await supabase.auth.signOut();
     setProfile(null);
-    setPermissions([]);
+    setPerspectiveState(null);
+    localStorage.removeItem("vanta_perspective");
   };
 
   const can = (perm: string) => permissions.includes(perm);
 
   return (
-    <AuthContext.Provider value={{ profile, permissions, loading, login, loginWithGoogle, signup, logout, can }}>
+    <AuthContext.Provider
+      value={{
+        profile,
+        effectiveRole,
+        availablePerspectives,
+        permissions,
+        loading,
+        login,
+        loginWithGoogle,
+        signup,
+        logout,
+        can,
+        setPerspective,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

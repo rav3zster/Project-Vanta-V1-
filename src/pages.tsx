@@ -256,14 +256,81 @@ export function TeamsPage() {
 // ---------- ROSTER ----------
 export function RosterPage() {
   const { data } = useSite();
+  const [activeGame, setActiveGame] = useState<string>("ALL");
+
+  const roster = data.roster ?? [];
+  const games = ["ALL", ...Array.from(new Set(roster.map((p) => p.game).filter(Boolean))) as string[]];
+
+  const filtered = activeGame === "ALL"
+    ? roster
+    : roster.filter((p) => (p.game ?? "").toUpperCase() === activeGame.toUpperCase());
+
+  // Calculate total winnings numeric sum if available
+  const totalWinnings = roster.reduce((acc, p) => {
+    if (!p.winnings) return acc;
+    const num = Number(p.winnings.replace(/[^0-9.-]+/g, ""));
+    return isNaN(num) ? acc : acc + num;
+  }, 0);
+
   return (
     <>
-      <PageHead kicker={`${brand.codename} // HOUSE ROSTER`} title="Roster"
-        sub={`The ${brand.organizationName} competitive lineup.`} />
-      <section className="mx-auto max-w-7xl px-5 py-16">
-        {data.roster.length === 0 ? <Empty label="NO ROSTER PUBLISHED" /> : (
-          <div className="grid gap-px border border-border bg-border sm:grid-cols-2 lg:grid-cols-5">
-            {data.roster.map((p) => (
+      <PageHead
+        kicker={`${brand.codename} // HOUSE ROSTER`}
+        title="Roster"
+        sub={`The ${brand.organizationName} elite competitive lineup across titles.`}
+      />
+      <section className="mx-auto max-w-7xl px-5 py-12">
+        {/* Organization Showcase Stats Bar */}
+        <div className="mb-10 grid gap-4 border border-border bg-surface p-6 sm:grid-cols-3">
+          <div>
+            <Mono className="text-[10px]">TOTAL EARNINGS</Mono>
+            <div className="mt-1 font-display text-3xl font-black text-accent">
+              ${totalWinnings.toLocaleString()}
+            </div>
+            <div className="text-xs text-muted">Across official championship circuits</div>
+          </div>
+          <div>
+            <Mono className="text-[10px]">ACTIVE OPERATORS</Mono>
+            <div className="mt-1 font-display text-3xl font-black text-foreground">
+              {roster.length}
+            </div>
+            <div className="text-xs text-muted">Signed across {Math.max(1, games.length - 1)} competitive titles</div>
+          </div>
+          <div>
+            <Mono className="text-[10px]">GLOBAL STATUS</Mono>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="status-pulse inline-block size-2 rounded-full bg-accent" />
+              <span className="font-mono text-xl font-bold text-accent">TIER 1 ROSTER</span>
+            </div>
+            <div className="text-xs text-muted">Managed by Project Vanta Operations</div>
+          </div>
+        </div>
+
+        {/* Game Filter Tabs */}
+        {games.length > 1 && (
+          <div className="mb-8 flex flex-wrap items-center gap-2 border-b border-border pb-4">
+            <span className="mr-2 font-mono text-[10px] tracking-[0.2em] text-muted">FILTER TITLE:</span>
+            {games.map((g) => (
+              <button
+                key={g}
+                onClick={() => setActiveGame(g)}
+                className={`border px-3 py-1.5 font-mono text-[11px] tracking-[0.15em] transition-colors ${
+                  activeGame === g
+                    ? "border-accent bg-accent/10 font-bold text-accent"
+                    : "border-border text-muted hover:border-border-strong hover:text-foreground"
+                }`}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {filtered.length === 0 ? (
+          <Empty label="NO PLAYERS IN THIS CATEGORY" />
+        ) : (
+          <div className="grid gap-px border border-border bg-border sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {filtered.map((p) => (
               <PlayerCard key={p.handle} p={p} />
             ))}
           </div>
@@ -367,14 +434,14 @@ export function RegisterPage({ onLogin }: { onLogin: () => void }) {
 
 // ---------- DASHBOARD ----------
 export function DashboardPage({ onControl }: { onControl: () => void }) {
-  const { profile, permissions } = useAuth();
+  const { profile, effectiveRole, permissions } = useAuth();
   const [notifs, setNotifs] = useState<any[]>([]);
   useEffect(() => { api.getNotifications().then(({ notifications }) => setNotifs(notifications ?? [])).catch(() => {}); }, []);
-  const admin = profile && profile.role !== "HUMAN";
+  const admin = effectiveRole !== "HUMAN";
   return (
     <>
       <PageHead kicker={`${brand.codename} // OPERATOR`} title="Dashboard"
-        sub={profile ? `Signed in as ${profile.username} · ${profile.role}` : undefined} />
+        sub={profile ? `Signed in as ${profile.username} · ${effectiveRole}` : undefined} />
       <section className="mx-auto max-w-7xl px-5 py-16">
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="border border-border bg-surface p-6 lg:col-span-2">

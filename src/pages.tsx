@@ -350,83 +350,92 @@ export function RosterPage() {
           </div>
         )}
 
-        {/* Player Section */}
+        {/* Player Section Container — Exact same container outline with persistent sliding card deck */}
         {filtered.length === 0 ? (
           <Empty label="NO PLAYERS IN THIS CATEGORY" />
-        ) : activeGame !== "ALL" && selectedPlayer ? (
-          /* Active Game Inspector Mode: Selected Card + Gathered Cards on Left, Dossier on Right */
-          <div className="grid gap-6 lg:grid-cols-[320px_1fr] items-start">
-            {/* Left Column: Selected Card on Top + Other Players Gathered Below */}
-            <div className="space-y-4">
-              <div className="transition-all duration-300">
-                <PlayerCard
-                  p={selectedPlayer}
-                  isSelected
-                  onClick={() => setSelectedPlayer(null)}
+        ) : (
+          <div className="relative border border-border bg-background overflow-hidden">
+            {/* The 4-column layout track */}
+            <div className="grid gap-px grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 bg-border relative min-h-[580px]">
+              {/* Render all cards persistently so browser executes fluid transform interpolation */}
+              {filtered.map((p, idx) => {
+                const isSelected = selectedPlayer?.handle === p.handle;
+                const isExpanded = selectedPlayer !== null && activeGame !== "ALL";
+                const selectedIdx = filtered.findIndex((x) => x.handle === selectedPlayer?.handle);
+
+                let cardStyle: React.CSSProperties = {
+                  transition: "transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.5s ease, z-index 0.3s ease",
+                };
+
+                if (isExpanded) {
+                  // In desktop 4-col layout, slide all cards to column 0
+                  const offsetToCol0 = -idx * 100;
+                  if (isSelected) {
+                    cardStyle = {
+                      ...cardStyle,
+                      transform: `translate3d(${offsetToCol0}%, 0, 0) scale(1)`,
+                      zIndex: 30,
+                      opacity: 1,
+                    };
+                  } else {
+                    const stackRank = Math.abs(idx - selectedIdx);
+                    cardStyle = {
+                      ...cardStyle,
+                      transform: `translate3d(${offsetToCol0}%, ${stackRank * 6}px, 0) scale(${1 - stackRank * 0.04})`,
+                      zIndex: Math.max(1, 20 - stackRank),
+                      opacity: Math.max(0.2, 0.8 - stackRank * 0.2),
+                    };
+                  }
+                } else {
+                  cardStyle = {
+                    ...cardStyle,
+                    transform: "translate3d(0, 0, 0) scale(1)",
+                    zIndex: 10,
+                    opacity: 1,
+                  };
+                }
+
+                return (
+                  <div
+                    key={p.handle}
+                    style={cardStyle}
+                    className="relative bg-surface h-full"
+                  >
+                    <PlayerCard
+                      p={p}
+                      isSelected={isSelected && isExpanded}
+                      onClick={activeGame !== "ALL" ? () => setSelectedPlayer(isSelected ? null : p) : undefined}
+                    />
+                  </div>
+                );
+              })}
+
+              {/* Dossier Panel overlaying the remaining 3 columns when an operator is selected */}
+              <div
+                className={`absolute inset-y-0 right-0 left-0 lg:left-[25%] md:left-[33.33%] hidden md:block bg-surface border-l border-border transition-all duration-600 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
+                  selectedPlayer && activeGame !== "ALL"
+                    ? "opacity-100 translate-x-0 pointer-events-auto z-25"
+                    : "opacity-0 translate-x-16 pointer-events-none z-0"
+                }`}
+              >
+                {selectedPlayer && (
+                  <PlayerDossier
+                    player={selectedPlayer}
+                    onClose={() => setSelectedPlayer(null)}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Mobile layout fallback for phone screens (< md) */}
+            {selectedPlayer && activeGame !== "ALL" && (
+              <div className="block md:hidden border-t border-border bg-surface animate-bundle">
+                <PlayerDossier
+                  player={selectedPlayer}
+                  onClose={() => setSelectedPlayer(null)}
                 />
               </div>
-
-              {/* Gathered Remaining Cards Below */}
-              {otherPlayers.length > 0 && (
-                <div className="border border-border bg-surface/50 p-4 space-y-3">
-                  <div className="flex items-center justify-between border-b border-border/70 pb-2">
-                    <Mono className="text-[10px] text-muted">
-                      OTHER {activeGame} OPERATORS ({otherPlayers.length})
-                    </Mono>
-                    <span className="font-mono text-[9px] text-accent">CLICK TO SWITCH</span>
-                  </div>
-                  <div className="space-y-2">
-                    {otherPlayers.map((op) => (
-                      <button
-                        key={op.handle}
-                        onClick={() => setSelectedPlayer(op)}
-                        className="group flex w-full cursor-pointer items-center gap-3 border border-border bg-background/80 p-2.5 text-left transition-all duration-200 hover:border-accent/80 hover:bg-surface-hover hover:translate-x-1"
-                      >
-                        <div className="relative size-11 shrink-0 overflow-hidden border border-border bg-surface">
-                          {op.image ? (
-                            <img src={op.image} alt={op.handle} className="size-full object-cover" />
-                          ) : (
-                            <div className="flex size-full items-center justify-center font-display font-black text-xs text-border-strong">
-                              {(op.handle || "?").slice(0, 2)}
-                            </div>
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="font-display text-sm font-black text-foreground group-hover:text-accent transition-colors">
-                              {op.handle}
-                            </span>
-                            <span className="font-mono text-[9px] text-accent">
-                              {op.role}
-                            </span>
-                          </div>
-                          <div className="text-[11px] text-muted truncate">{op.name}</div>
-                        </div>
-                        <span className="font-mono text-xs text-muted group-hover:text-accent transition-colors">
-                          →
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Right Column: Player Dossier */}
-            <div className="min-w-0">
-              <PlayerDossier player={selectedPlayer} onClose={() => setSelectedPlayer(null)} />
-            </div>
-          </div>
-        ) : (
-          /* Standard Card Grid (When ALL is active or no specific player is clicked) */
-          <div className="grid gap-px border border-border bg-border sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {filtered.map((p) => (
-              <PlayerCard
-                key={p.handle}
-                p={p}
-                onClick={activeGame !== "ALL" ? () => setSelectedPlayer(p) : undefined}
-              />
-            ))}
+            )}
           </div>
         )}
       </section>

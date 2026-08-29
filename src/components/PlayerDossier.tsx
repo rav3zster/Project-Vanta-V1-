@@ -129,7 +129,7 @@ export function PlayerDossier({ player, onClose }: PlayerDossierProps) {
   };
 
   return (
-    <div className="relative flex flex-col border border-border bg-surface shadow-2xl transition-all">
+    <div className="relative flex flex-col bg-surface transition-all size-full animate-bundle">
       {/* Top Header Strip with Close Action */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-background/60 px-5 py-3.5">
         <div className="flex items-center gap-3">

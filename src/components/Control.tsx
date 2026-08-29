@@ -3,6 +3,8 @@ import { useAuth } from "../lib/auth";
 import { api, type Player } from "../lib/supabase";
 import { StatusChip, Mono } from "./ui";
 import { Bracket } from "./Bracket";
+import { getGameConfig, GAME_LIST } from "../config/games";
+import { uploadRosterImage } from "../lib/storage";
 
 const LIFECYCLE = [
   "DRAFT", "REGISTRATION_OPEN", "REGISTRATION_CLOSED", "ROSTER_LOCK",
@@ -615,6 +617,7 @@ function RosterAdmin({
 }) {
   const [players, setPlayers] = useState<Player[]>(roster);
   const [dirty, setDirty] = useState(false);
+  const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
 
   // Re-sync when a save round-trips or the roster first loads (until edited).
   useEffect(() => { if (!dirty) setPlayers(roster); }, [roster, dirty]);
@@ -626,10 +629,33 @@ function RosterAdmin({
     setDirty(true);
     setPlayers((prev) => prev.map((p, idx) => (idx === i ? { ...p, ...patch } : p)));
   }
+
+  function handleGameChange(i: number, newGame: string) {
+    const cfg = getGameConfig(newGame);
+    edit(i, {
+      game: newGame,
+      role: cfg.roles[0] || "PLAYER",
+      rank: cfg.ranks[0] || "",
+    });
+  }
+
+  async function handleFileUpload(i: number, file: File) {
+    setUploadingIdx(i);
+    try {
+      const url = await uploadRosterImage(file);
+      edit(i, { image: url });
+    } catch (err) {
+      console.error("Upload error:", err);
+    } finally {
+      setUploadingIdx(null);
+    }
+  }
+
   function remove(i: number) {
     setDirty(true);
     setPlayers((prev) => prev.filter((_, idx) => idx !== i));
   }
+
   function move(i: number, dir: -1 | 1) {
     const j = i + dir;
     if (j < 0 || j >= players.length) return;
@@ -640,16 +666,19 @@ function RosterAdmin({
       return next;
     });
   }
+
   function add() {
     setDirty(true);
+    const defaultGame = "VALORANT";
+    const cfg = getGameConfig(defaultGame);
     setPlayers((prev) => [
       ...prev,
       {
         handle: "",
         name: "",
-        role: "FLEX",
-        game: "VALORANT",
-        rank: "",
+        role: cfg.roles[0] || "DUELIST",
+        game: defaultGame,
+        rank: cfg.ranks[0] || "Radiant",
         winnings: "$0",
         region: "GLOBAL",
         image: "",
@@ -666,109 +695,212 @@ function RosterAdmin({
         <Mono>{players.length} OPERATOR{players.length === 1 ? "" : "S"}{dirty ? " · UNSAVED" : ""}</Mono>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {players.length === 0 && (
           <p className="font-mono text-xs text-border-strong">No players yet. Add your first operator below.</p>
         )}
-        {players.map((p, i) => (
-          <div key={i} className="border border-border p-4 bg-background/50">
-            <div className="flex flex-col gap-4 sm:flex-row">
-              <div
-                className="grain relative flex size-20 shrink-0 items-center justify-center overflow-hidden border border-border-strong bg-background"
-                aria-hidden="true"
-              >
-                {p.image ? (
-                  <img src={p.image} alt="" className="size-full object-cover" onError={(e) => ((e.target as HTMLImageElement).style.visibility = "hidden")} />
-                ) : (
-                  <span className="relative z-10 font-display text-lg font-black text-border-strong">
-                    {(p.handle || "?").slice(0, 2)}
-                  </span>
-                )}
+        {players.map((p, i) => {
+          const gameKey = p.game || "VALORANT";
+          const cfg = getGameConfig(gameKey);
+
+          return (
+            <div key={i} className="border border-border p-4 bg-background/60">
+              <div className="flex flex-col gap-4 lg:flex-row">
+                {/* Image Preview & Local Upload */}
+                <div className="flex flex-col items-center gap-2 sm:items-start">
+                  <div
+                    className="grain relative flex size-24 shrink-0 items-center justify-center overflow-hidden border border-border-strong bg-background"
+                    aria-hidden="true"
+                  >
+                    {uploadingIdx === i ? (
+                      <span className="font-mono text-[10px] text-accent animate-pulse">UPLOADING…</span>
+                    ) : p.image ? (
+                      <img src={p.image} alt="" className="size-full object-cover" onError={(e) => ((e.target as HTMLImageElement).style.visibility = "hidden")} />
+                    ) : (
+                      <span className="relative z-10 font-display text-2xl font-black text-border-strong">
+                        {(p.handle || "?").slice(0, 2)}
+                      </span>
+                    )}
+                  </div>
+                  <label className="cursor-pointer border border-border px-2.5 py-1 text-center font-mono text-[9px] tracking-[0.1em] text-accent transition-colors hover:border-accent hover:bg-accent/10">
+                    <span>📁 {p.image ? "REPLACE PHOTO" : "UPLOAD PHOTO"}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleFileUpload(i, f);
+                      }}
+                    />
+                  </label>
+                  {p.image && (
+                    <button
+                      type="button"
+                      onClick={() => edit(i, { image: "" })}
+                      className="font-mono text-[9px] text-danger hover:underline"
+                    >
+                      ✕ Clear Photo
+                    </button>
+                  )}
+                </div>
+
+                {/* Operator Fields */}
+                <div className="grid flex-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                  {/* Handle */}
+                  <div>
+                    <label className="mb-1 block font-mono text-[9px] text-muted">GAMER HANDLE</label>
+                    <input
+                      className={input}
+                      placeholder="e.g. TITAN, SPECTRE"
+                      value={p.handle}
+                      onChange={(e) => edit(i, { handle: e.target.value.toUpperCase() })}
+                    />
+                  </div>
+
+                  {/* Real Name */}
+                  <div>
+                    <label className="mb-1 block font-mono text-[9px] text-muted">REAL NAME</label>
+                    <input
+                      className={input}
+                      placeholder="e.g. Rave Ends"
+                      value={p.name}
+                      onChange={(e) => edit(i, { name: e.target.value })}
+                    />
+                  </div>
+
+                  {/* Game Selection */}
+                  <div>
+                    <label className="mb-1 block font-mono text-[9px] text-muted">COMPETITIVE GAME</label>
+                    <select
+                      className={input}
+                      value={gameKey}
+                      onChange={(e) => handleGameChange(i, e.target.value)}
+                    >
+                      {GAME_LIST.map((g) => (
+                        <option key={g} value={g}>
+                          {g}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Game-Specific Role */}
+                  <div>
+                    <label className="mb-1 block font-mono text-[9px] text-muted">
+                      {gameKey} ROLE
+                    </label>
+                    <div className="relative">
+                      <input
+                        className={input}
+                        placeholder="Select or type role"
+                        list={`roles-${i}`}
+                        value={p.role}
+                        onChange={(e) => edit(i, { role: e.target.value.toUpperCase() })}
+                      />
+                      <datalist id={`roles-${i}`}>
+                        {cfg.roles.map((r) => (
+                          <option key={r} value={r} />
+                        ))}
+                      </datalist>
+                    </div>
+                  </div>
+
+                  {/* Game-Specific Rank */}
+                  <div>
+                    <label className="mb-1 block font-mono text-[9px] text-muted">
+                      {gameKey} RANK
+                    </label>
+                    <div className="relative">
+                      <input
+                        className={input}
+                        placeholder="Select or type rank"
+                        list={`ranks-${i}`}
+                        value={p.rank ?? ""}
+                        onChange={(e) => edit(i, { rank: e.target.value })}
+                      />
+                      <datalist id={`ranks-${i}`}>
+                        {cfg.ranks.map((rk) => (
+                          <option key={rk} value={rk} />
+                        ))}
+                      </datalist>
+                    </div>
+                  </div>
+
+                  {/* Earnings / Winnings */}
+                  <div>
+                    <label className="mb-1 block font-mono text-[9px] text-muted">TOTAL EARNINGS</label>
+                    <input
+                      className={input}
+                      placeholder="e.g. $75,000"
+                      value={p.winnings ?? ""}
+                      onChange={(e) => edit(i, { winnings: e.target.value })}
+                    />
+                  </div>
+
+                  {/* Region */}
+                  <div>
+                    <label className="mb-1 block font-mono text-[9px] text-muted">REGION</label>
+                    <select
+                      className={input}
+                      value={REGION_PRESETS.includes(p.region) ? p.region : "GLOBAL"}
+                      onChange={(e) => edit(i, { region: e.target.value })}
+                    >
+                      {REGION_PRESETS.map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Direct Image URL fallback */}
+                  <div className="sm:col-span-2">
+                    <label className="mb-1 block font-mono text-[9px] text-muted">IMAGE URL (OPTIONAL)</label>
+                    <input
+                      className={input}
+                      placeholder="https://images.unsplash.com/... or uploaded photo"
+                      value={p.image ?? ""}
+                      onChange={(e) => edit(i, { image: e.target.value })}
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="grid flex-1 gap-2.5 sm:grid-cols-3">
-                <input
-                  className={input}
-                  placeholder="HANDLE (e.g. TITAN)"
-                  value={p.handle}
-                  onChange={(e) => edit(i, { handle: e.target.value.toUpperCase() })}
-                />
-                <input
-                  className={input}
-                  placeholder="Real Name (e.g. Rave Ends)"
-                  value={p.name}
-                  onChange={(e) => edit(i, { name: e.target.value })}
-                />
-                <input
-                  className={input}
-                  placeholder="GAME (e.g. CS2, VALORANT)"
-                  list="roster-games"
-                  value={p.game ?? ""}
-                  onChange={(e) => edit(i, { game: e.target.value.toUpperCase() })}
-                />
-                <input
-                  className={input}
-                  placeholder="ROLE (e.g. IGL / DUELIST)"
-                  list="roster-roles"
-                  value={p.role}
-                  onChange={(e) => edit(i, { role: e.target.value.toUpperCase() })}
-                />
-                <input
-                  className={input}
-                  placeholder="RANK (e.g. Global Elite, Radiant #1)"
-                  value={p.rank ?? ""}
-                  onChange={(e) => edit(i, { rank: e.target.value })}
-                />
-                <input
-                  className={input}
-                  placeholder="WINNINGS (e.g. $75,000)"
-                  value={p.winnings ?? ""}
-                  onChange={(e) => edit(i, { winnings: e.target.value })}
-                />
-                <select
-                  className={input}
-                  value={REGION_PRESETS.includes(p.region) ? p.region : "GLOBAL"}
-                  onChange={(e) => edit(i, { region: e.target.value })}
-                >
-                  {REGION_PRESETS.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  className={`${input} sm:col-span-2`}
-                  placeholder="Image URL (https://…)"
-                  value={p.image ?? ""}
-                  onChange={(e) => edit(i, { image: e.target.value })}
-                />
+
+              {/* Operator footer bar */}
+              <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-2.5">
+                <div className="flex items-center gap-2 font-mono text-[10px] text-muted">
+                  <span className="font-bold text-accent">{p.game || "VALORANT"}</span>
+                  <span>·</span>
+                  <span>{p.role || "FLEX"}</span>
+                  {p.rank && (
+                    <>
+                      <span>·</span>
+                      <span className="text-foreground">{p.rank}</span>
+                    </>
+                  )}
+                  {p.winnings && (
+                    <>
+                      <span>·</span>
+                      <span className="text-accent">{p.winnings}</span>
+                    </>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button onClick={() => move(i, -1)} disabled={i === 0}
+                    className="border border-border px-2 py-1 font-mono text-[10px] text-muted hover:text-foreground disabled:opacity-30">↑</button>
+                  <button onClick={() => move(i, 1)} disabled={i === players.length - 1}
+                    className="border border-border px-2 py-1 font-mono text-[10px] text-muted hover:text-foreground disabled:opacity-30">↓</button>
+                  <button onClick={() => remove(i)}
+                    className="border border-danger/40 px-2.5 py-1 font-mono text-[10px] tracking-[0.1em] text-danger hover:bg-danger/5">REMOVE</button>
+                </div>
               </div>
             </div>
-            <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-2">
-              <div className="font-mono text-[10px] text-muted">
-                {p.game || "UNASSIGNED"} · {p.role || "FLEX"} {p.rank ? `· ${p.rank}` : ""} {p.winnings ? `· ${p.winnings}` : ""}
-              </div>
-              <div className="flex items-center gap-1.5">
-                <button onClick={() => move(i, -1)} disabled={i === 0}
-                  className="border border-border px-2 py-1 font-mono text-[10px] text-muted hover:text-foreground disabled:opacity-30">↑</button>
-                <button onClick={() => move(i, 1)} disabled={i === players.length - 1}
-                  className="border border-border px-2 py-1 font-mono text-[10px] text-muted hover:text-foreground disabled:opacity-30">↓</button>
-                <button onClick={() => remove(i)}
-                  className="border border-danger/40 px-2.5 py-1 font-mono text-[10px] tracking-[0.1em] text-danger hover:bg-danger/5">REMOVE</button>
-              </div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      <datalist id="roster-games">
-        {GAME_PRESETS.map((g) => <option key={g} value={g} />)}
-      </datalist>
-
-      <datalist id="roster-roles">
-        {ROLE_PRESETS.map((r) => <option key={r} value={r} />)}
-      </datalist>
-
-      <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
+      <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-border pt-4">
         <button onClick={add} className={btn} disabled={!canManage}>+ ADD OPERATOR</button>
         <button onClick={() => { setDirty(false); setPlayers(roster); }} disabled={!dirty}
           className={`${btn} disabled:opacity-40`}>DISCARD</button>
@@ -783,6 +915,7 @@ function RosterAdmin({
     </div>
   );
 }
+
 
 function MatchResolver({
   m, teams, busy, can, op,

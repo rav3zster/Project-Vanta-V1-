@@ -1,0 +1,330 @@
+/* --- Tactical Obsidian (default) faces --- */
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+/* --- Inferno (FPS) --- */
+@import url('https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+/* --- Neon Grid (cyberpunk) --- */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap');
+/* --- Verdant Protocol (survival) --- */
+@import url('https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600&display=swap');
+/* --- Gold Royale (regal) --- */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
+/* --- Synthwave (retro) --- */
+@import url('https://fonts.googleapis.com/css2?family=Audiowide&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&display=swap');
+/* --- Arclight (light ops) --- */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap');
+/* --- Frostline (winter sim) --- */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700;9..144,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --font-display: 'Archivo', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Classified-operation monochrome base + single restrained accent */
+  --color-background: #08090a;
+  --color-foreground: #eceef0;
+  --color-surface: #0e1012;
+  --color-surface-secondary: #141719;
+  --color-surface-hover: #1a1e21;
+  --color-border: #22262a;
+  --color-border-strong: #333a40;
+  --color-muted: #7c858c;
+  --color-accent: #d6ff2e;
+  --color-accent-foreground: #08090a;
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+  --color-info: #60a5fa;
+}
+
+/* ------------------------------------------------------------------ */
+/* THEME CATALOGUE                                                      */
+/* The @theme block above defines the default "Tactical Obsidian"       */
+/* stance. Each theme below overrides only the color tokens via an      */
+/* unlayered html[data-theme] selector, so the Tailwind utilities       */
+/* (bg-surface, text-accent, border-border …) re-point at runtime.      */
+/* The original obsidian theme is preserved exactly.                    */
+/* ------------------------------------------------------------------ */
+
+html[data-theme="obsidian"] {
+  color-scheme: dark;
+  --radius: 0px;
+  --color-background: #08090a;
+  --color-foreground: #eceef0;
+  --color-surface: #0e1012;
+  --color-surface-secondary: #141719;
+  --color-surface-hover: #1a1e21;
+  --color-border: #22262a;
+  --color-border-strong: #333a40;
+  --color-muted: #7c858c;
+  --color-accent: #d6ff2e;
+  --color-accent-foreground: #08090a;
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+  --color-info: #60a5fa;
+}
+
+/* Inferno — FPS / arena shooter, molten red on scorched black */
+html[data-theme="inferno"] {
+  color-scheme: dark;
+  --radius: 0px;
+  --font-display: "Saira Condensed", sans-serif;
+  --font-body: "Barlow", sans-serif;
+  --font-mono: "Share Tech Mono", monospace;
+  --color-background: #0c0708;
+  --color-foreground: #f6eae8;
+  --color-surface: #150a0b;
+  --color-surface-secondary: #1d0f10;
+  --color-surface-hover: #251416;
+  --color-border: #37191c;
+  --color-border-strong: #542a2e;
+  --color-muted: #a58380;
+  --color-accent: #ff3b2f;
+  --color-accent-foreground: #0c0708;
+  --color-success: #57e08a;
+  --color-warning: #ffb020;
+  --color-danger: #ff6b6b;
+  --color-info: #6ea8ff;
+}
+
+/* Neon Grid — cyberpunk / arcade, electric cyan on midnight blue */
+html[data-theme="neon"] {
+  color-scheme: dark;
+  --radius: 2px;
+  --font-display: "Orbitron", sans-serif;
+  --font-body: "Rajdhani", sans-serif;
+  --font-mono: "Share Tech Mono", monospace;
+  --color-background: #060814;
+  --color-foreground: #e6ecff;
+  --color-surface: #0b0f22;
+  --color-surface-secondary: #10162e;
+  --color-surface-hover: #161d3c;
+  --color-border: #232c4f;
+  --color-border-strong: #364373;
+  --color-muted: #7d88b5;
+  --color-accent: #00eaff;
+  --color-accent-foreground: #060814;
+  --color-success: #39ff88;
+  --color-warning: #ffcf3a;
+  --color-danger: #ff4d8d;
+  --color-info: #6ea8ff;
+}
+
+/* Verdant Protocol — survival / strategy, signal green on deep pine */
+html[data-theme="verdant"] {
+  color-scheme: dark;
+  --radius: 3px;
+  --font-display: "Zilla Slab", serif;
+  --font-body: "Work Sans", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --color-background: #070b09;
+  --color-foreground: #e7f0ea;
+  --color-surface: #0c110e;
+  --color-surface-secondary: #111813;
+  --color-surface-hover: #17211b;
+  --color-border: #223029;
+  --color-border-strong: #33473b;
+  --color-muted: #7f8f86;
+  --color-accent: #4ade80;
+  --color-accent-foreground: #070b09;
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+  --color-info: #60a5fa;
+}
+
+/* Gold Royale — battle royale, imperial gold on charcoal */
+html[data-theme="royale"] {
+  color-scheme: dark;
+  --radius: 2px;
+  --font-display: "Cinzel", serif;
+  --font-body: "EB Garamond", serif;
+  --font-mono: "DM Mono", monospace;
+  --color-background: #0b0a07;
+  --color-foreground: #f3ede0;
+  --color-surface: #12100b;
+  --color-surface-secondary: #191610;
+  --color-surface-hover: #211d15;
+  --color-border: #322c1f;
+  --color-border-strong: #4a412d;
+  --color-muted: #9a9078;
+  --color-accent: #ffc21f;
+  --color-accent-foreground: #0b0a07;
+  --color-success: #7bd88f;
+  --color-warning: #ffb020;
+  --color-danger: #f87171;
+  --color-info: #7bb8ff;
+}
+
+/* Synthwave — retro / racing, hot magenta on twilight violet */
+html[data-theme="synthwave"] {
+  color-scheme: dark;
+  --radius: 8px;
+  --font-display: "Audiowide", sans-serif;
+  --font-body: "Chakra Petch", sans-serif;
+  --font-mono: "DM Mono", monospace;
+  --color-background: #120a1f;
+  --color-foreground: #f4e9ff;
+  --color-surface: #1a0f2e;
+  --color-surface-secondary: #221439;
+  --color-surface-hover: #2c1b47;
+  --color-border: #3d2a63;
+  --color-border-strong: #573c85;
+  --color-muted: #a692c9;
+  --color-accent: #ff2fd0;
+  --color-accent-foreground: #120a1f;
+  --color-success: #4ade80;
+  --color-warning: #ffcf3a;
+  --color-danger: #ff6b8b;
+  --color-info: #6ea8ff;
+}
+
+/* Arclight — LIGHT MODE tactical / daylight ops, inked mono on bone */
+html[data-theme="arclight"] {
+  color-scheme: light;
+  --grain-color: rgba(0, 0, 0, 0.03);
+  --radius: 4px;
+  --font-display: "Sora", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --color-background: #f4f5f6;
+  --color-foreground: #14171a;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #eceef0;
+  --color-surface-hover: #e3e6e9;
+  --color-border: #d5d9dd;
+  --color-border-strong: #b4bcc3;
+  --color-muted: #5c656d;
+  --color-accent: #121417;
+  --color-accent-foreground: #f4f5f6;
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+  --color-info: #2563eb;
+}
+
+/* Frostline — LIGHT MODE winter / sim, glacier cyan on ice */
+html[data-theme="frost"] {
+  color-scheme: light;
+  --grain-color: rgba(14, 27, 38, 0.035);
+  --radius: 12px;
+  --font-display: "Fraunces", serif;
+  --font-body: "Nunito Sans", sans-serif;
+  --font-mono: "DM Mono", monospace;
+  --color-background: #eef3f7;
+  --color-foreground: #0e1b26;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #e2ebf2;
+  --color-surface-hover: #d5e2ec;
+  --color-border: #c3d3df;
+  --color-border-strong: #9db3c4;
+  --color-muted: #547084;
+  --color-accent: #0891b2;
+  --color-accent-foreground: #ffffff;
+  --color-success: #059669;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+  --color-info: #2563eb;
+}
+
+/* Shape language: each theme's --radius softens interactive controls and media.
+   Applied at low specificity (:where) so component utilities can still win, and
+   deliberately NOT applied to bordered grid cells so hairline grids stay seamless. */
+:where(button, input, select, textarea, img) {
+  border-radius: var(--radius, 0px);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Subtle grain / scanline texture over the classified base */
+.grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(var(--grain-color, rgba(255, 255, 255, 0.025)) 1px, transparent 1px);
+  background-size: 3px 3px;
+  z-index: 0;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+}
+
+/* Hide scrollbars until scrolling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+*:hover {
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+}
+*:hover::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(214, 255, 46, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(214, 255, 46, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(214, 255, 46, 0);
+  }
+}
+.status-pulse {
+  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.marquee-track {
+  animation: marquee 40s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-pulse,
+  .marquee-track {
+    animation: none;
+  }
+}

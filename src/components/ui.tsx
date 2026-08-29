@@ -1,0 +1,88 @@
+import type { ReactNode } from "react";
+import type { Player } from "../lib/supabase";
+
+const STATUS_STYLES: Record<string, string> = {
+  LIVE: "text-accent border-accent/40 bg-accent/5",
+  COMPLETED: "text-muted border-border bg-surface-secondary",
+  READY: "text-success border-success/30 bg-success/5",
+  SCHEDULED: "text-muted border-border bg-transparent",
+  DISPUTED: "text-danger border-danger/40 bg-danger/5",
+  FORFEIT: "text-warning border-warning/40 bg-warning/5",
+  REGISTRATION_OPEN: "text-accent border-accent/40 bg-accent/5",
+  REGISTRATION_CLOSED: "text-muted border-border bg-surface-secondary",
+  CRITICAL: "text-danger border-danger/40 bg-danger/5",
+  WARNING: "text-warning border-warning/40 bg-warning/5",
+  INFO: "text-info border-info/30 bg-info/5",
+};
+
+export function StatusChip({ status }: { status: string }) {
+  const style = STATUS_STYLES[status] ?? "text-muted border-border";
+  const live = status === "LIVE";
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 border px-2 py-0.5 font-mono text-[10px] font-medium tracking-[0.15em] uppercase ${style}`}
+    >
+      {live && <span className="status-pulse inline-block size-1.5 rounded-full bg-accent" />}
+      {status.replace(/_/g, " ")}
+    </span>
+  );
+}
+
+export function SectionHeader({
+  index,
+  title,
+  action,
+}: {
+  index: string;
+  title: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="mb-8 flex items-end justify-between border-b border-border pb-4">
+      <div className="flex items-baseline gap-4">
+        <span className="font-mono text-xs tracking-[0.25em] text-accent">{index}</span>
+        <h2 className="font-display text-2xl font-extrabold tracking-tight uppercase sm:text-3xl">
+          {title}
+        </h2>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+export function Mono({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return (
+    <span className={`font-mono text-xs tracking-[0.1em] text-muted ${className}`}>{children}</span>
+  );
+}
+
+export function PlayerCard({ p }: { p: Player }) {
+  return (
+    <div className="group relative flex flex-col bg-surface transition-colors hover:bg-surface-hover">
+      <div className="grain relative aspect-[4/5] overflow-hidden border-b border-border bg-surface-secondary">
+        {p.image ? (
+          <img
+            src={p.image}
+            alt={`${p.handle} — ${p.name}`}
+            loading="lazy"
+            className="size-full object-cover grayscale transition-all duration-500 group-hover:grayscale-0"
+          />
+        ) : (
+          <div className="flex size-full items-center justify-center">
+            <span className="relative z-10 font-display text-5xl font-black tracking-tighter text-border-strong">
+              {(p.handle || "?").slice(0, 2)}
+            </span>
+          </div>
+        )}
+        <span className="absolute left-3 top-3 z-10 border border-accent/40 bg-background/70 px-2 py-0.5 font-mono text-[10px] tracking-[0.15em] text-accent backdrop-blur-sm">
+          {p.role}
+        </span>
+      </div>
+      <div className="relative z-10 p-5">
+        <div className="font-display text-2xl font-black tracking-tight">{p.handle}</div>
+        <div className="text-sm text-muted">{p.name}</div>
+        <div className="mt-3"><Mono>{p.region}</Mono></div>
+      </div>
+    </div>
+  );
+}

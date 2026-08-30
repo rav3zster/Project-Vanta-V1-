@@ -39,21 +39,33 @@ function ClassifiedBar() {
     `${data.stats.openDisputes} DISPUTE${data.stats.openDisputes === 1 ? "" : "S"} UNDER REVIEW`,
     "GLOBAL SERVERS NOMINAL",
   ];
-  // 4x duplication ensures seamless infinite looping on any display resolution
-  const fullTrack = [...items, ...items, ...items, ...items];
+  // 2× duplication so the -50%→0 keyframe loops seamlessly (copy1 === copy2 visually)
+  const track = [...items, ...items];
 
   return (
     <div className="overflow-hidden border-b border-border bg-surface/90 backdrop-blur-sm select-none">
-      <div className="marquee-track flex w-max gap-8 py-1.5 cursor-default">
-        {fullTrack.map((tx, i) => (
-          <span key={i} className="flex shrink-0 items-center gap-8 font-mono text-[10px] tracking-[0.2em] text-muted">
-            {tx}<span className="text-accent/50">/</span>
+      {/* Inline style guarantees the animation runs regardless of Tailwind CSS injection order */}
+      <div
+        className="flex cursor-default py-1.5"
+        style={{
+          width: "max-content",
+          gap: "2rem",
+          willChange: "transform",
+          animation: "marquee 18s linear infinite",
+        }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.animationPlayState = "paused"; }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.animationPlayState = "running"; }}
+      >
+        {track.map((tx, i) => (
+          <span key={i} className="flex shrink-0 items-center gap-6 font-mono text-[10px] tracking-[0.2em] text-muted">
+            {tx}<span className="text-accent/60">◆</span>
           </span>
         ))}
       </div>
     </div>
   );
 }
+
 
 function Nav({ onLogin, onControl, route }: { onLogin: () => void; onControl: () => void; route: Route }) {
   const { profile, effectiveRole, availablePerspectives, setPerspective, loading, logout } = useAuth();

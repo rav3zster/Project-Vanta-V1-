@@ -150,17 +150,17 @@ export function Bracket({ teams, matches }: { teams?: Team[]; matches?: Match[] 
 
       {/* Bracket Viewport */}
       <div className="grain relative overflow-x-auto border border-border bg-surface/40 p-4 sm:p-8">
-        <div className="relative z-10 flex min-w-[760px] gap-6 sm:gap-10">
-          {(mobileRound === "ALL" || mobileRound === "QUARTERFINAL") && (
+        <div className={`relative z-10 flex ${qf.length > 0 ? "min-w-[760px]" : "min-w-[520px]"} gap-6 sm:gap-10`}>
+          {qf.length > 0 && (mobileRound === "ALL" || mobileRound === "QUARTERFINAL") && (
             <Column title="QUARTERFINALS" ms={qf} find={find} className="w-60 sm:w-64" baseDelay={0} />
           )}
           {(mobileRound === "ALL" || mobileRound === "SEMIFINAL") && (
-            <Column title="SEMIFINALS" ms={sf} find={find} className="w-60 sm:w-64" baseDelay={160} />
+            <Column title="SEMIFINALS" ms={sf} find={find} className="w-60 sm:w-64" baseDelay={qf.length > 0 ? 160 : 0} />
           )}
           {(mobileRound === "ALL" || mobileRound === "FINAL") && (
             <div className="flex flex-col">
-              <Column title="FINAL" ms={final} find={find} className="w-60 sm:w-64 flex-1" baseDelay={320} />
-              <Reveal sweep delay={420} className="mt-6 w-60 sm:w-64 border border-accent/30 bg-accent/5 px-3 py-3">
+              <Column title="FINAL" ms={final} find={find} className="w-60 sm:w-64 flex-1" baseDelay={qf.length > 0 ? 320 : 160} />
+              <Reveal sweep delay={qf.length > 0 ? 420 : 260} className="mt-6 w-60 sm:w-64 border border-accent/30 bg-accent/5 px-3 py-3">
                 <div className="font-mono text-[10px] tracking-[0.25em] text-accent">CHAMPION</div>
                 <div className={`mt-1 text-sm ${champion ? "font-semibold text-foreground" : "text-border-strong"}`}>
                   {champion ? champion.name : "Pending final result"}

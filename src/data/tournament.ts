@@ -26,6 +26,15 @@ export type MatchStatus =
   | "DISPUTED"
   | "FORFEIT";
 
+export type TeamMember = {
+  name: string;
+  inGameName: string; // e.g. TenZ#NA1
+  discordId?: string; // e.g. tenz_official
+  role?: string;      // e.g. IGL, DUELIST, CONTROLLER, etc.
+  isIgl?: boolean;
+  isSub?: boolean;
+};
+
 export type Team = {
   id: string;
   name: string;
@@ -34,6 +43,11 @@ export type Team = {
   seed: number | null;
   checkedIn: boolean;
   approved?: boolean;
+  igl?: TeamMember;
+  members?: TeamMember[];
+  sub?: TeamMember;
+  contactEmail?: string;
+  registrationNotes?: string;
 };
 
 export type Match = {

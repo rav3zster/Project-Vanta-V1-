@@ -271,34 +271,138 @@ app.post(`${P}/seed`, async (c) => {
     requirePerm(profile, "seed.run");
 
     const now = new Date().toISOString();
-    const tags = [
-      ["Eclipse Order", "ECL", "APAC"], ["Nova Syndicate", "NVA", "EU"],
-      ["Vermillion", "VMN", "NA"], ["Ashfall Collective", "ASH", "APAC"],
-      ["Meridian Nine", "MR9", "EU"], ["Obsidian Pact", "OBS", "NA"],
-      ["Halcyon Drift", "HAL", "SA"], ["Cinder Vow", "CND", "APAC"],
+    const valTeams: Team[] = [
+      {
+        id: "t_sen", name: "Sentinels", tag: "SEN", region: "NA", seed: 1, checkedIn: true, approved: true,
+        contactEmail: "admin@sentinels.gg", registrationNotes: "Official Tier 1 VCT NA Roster",
+        igl: { name: "Tyson Ngo", inGameName: "TenZ#NA1", discordId: "tenz_official", role: "IGL", isIgl: true },
+        members: [
+          { name: "Zachary Patrone", inGameName: "zekken#NA1", discordId: "zekken_fps", role: "DUELIST" },
+          { name: "Gustavo Rossi", inGameName: "Sacy#BR1", discordId: "sacy_vlr", role: "INITIATOR" },
+          { name: "Bryan Luna", inGameName: "pANcada#BR1", discordId: "pancada_vlr", role: "CONTROLLER" },
+          { name: "Jordan Montemurro", inGameName: "Zellsis#NA1", discordId: "zellsis_vlr", role: "SENTINEL" },
+        ],
+        sub: { name: "Rahul Gosain", inGameName: "curry#NA1", discordId: "curry_fps", role: "SUB", isSub: true },
+      },
+      {
+        id: "t_fnc", name: "Fnatic", tag: "FNC", region: "EU", seed: 2, checkedIn: true, approved: true,
+        contactEmail: "contact@fnatic.com", registrationNotes: "Official Tier 1 VCT EMEA Roster",
+        igl: { name: "Jake Howlett", inGameName: "Boaster#EU1", discordId: "boaster_fnc", role: "IGL", isIgl: true },
+        members: [
+          { name: "Nikita Sirmitev", inGameName: "Derke#EU1", discordId: "derke_fnc", role: "DUELIST" },
+          { name: "Emir Muminovic", inGameName: "Alfajer#TR1", discordId: "alfajer_fnc", role: "SENTINEL" },
+          { name: "Leo Jannesson", inGameName: "Leo#EU1", discordId: "leo_fnc", role: "INITIATOR" },
+          { name: "Timofey Khromov", inGameName: "Chronicle#EU1", discordId: "chronicle_fnc", role: "CONTROLLER" },
+        ],
+        sub: { name: "Maks Dembo", inGameName: "kamyk#EU1", discordId: "kamyk_vlr", role: "SUB", isSub: true },
+      },
+      {
+        id: "t_prx", name: "Paper Rex", tag: "PRX", region: "APAC", seed: 3, checkedIn: true, approved: true,
+        contactEmail: "ops@prx.gg", registrationNotes: "Official Tier 1 VCT Pacific Roster",
+        igl: { name: "Alexandre Sallé", inGameName: "alecks#SG1", discordId: "alecks_prx", role: "IGL", isIgl: true },
+        members: [
+          { name: "Jason Susanto", inGameName: "f0rsakeN#ID1", discordId: "forsaken_prx", role: "FLEX" },
+          { name: "Ilya Petrov", inGameName: "something#RU1", discordId: "something_prx", role: "DUELIST" },
+          { name: "Khalish Rusyaidi", inGameName: "d4v41#MY1", discordId: "davai_prx", role: "INITIATOR" },
+          { name: "Aaron Leonhart", inGameName: "mindfreak#ID1", discordId: "mindfreak_prx", role: "CONTROLLER" },
+        ],
+        sub: { name: "Wang Jing Jie", inGameName: "Jinggg#SG1", discordId: "jinggg_prx", role: "SUB", isSub: true },
+      },
+      {
+        id: "t_drx", name: "DRX", tag: "DRX", region: "APAC", seed: 4, checkedIn: true, approved: true,
+        contactEmail: "valorant@drx.gg", registrationNotes: "Korean VCT Champions Contender",
+        igl: { name: "Kim Gu-taek", inGameName: "stax#KR1", discordId: "stax_drx", role: "IGL", isIgl: true },
+        members: [
+          { name: "Goo Sang-min", inGameName: "Rb#KR1", discordId: "rb_drx", role: "FLEX" },
+          { name: "Byung-chul Cho", inGameName: "BuZz#KR1", discordId: "buzz_drx", role: "DUELIST" },
+          { name: "Myeong-kwan Kim", inGameName: "MaKo#KR1", discordId: "mako_drx", role: "CONTROLLER" },
+          { name: "Yu Byung-chul", inGameName: "Flashback#KR1", discordId: "flashback_drx", role: "SENTINEL" },
+        ],
+        sub: { name: "Jung Min-seok", inGameName: "Foxy9#KR1", discordId: "foxy9_drx", role: "SUB", isSub: true },
+      },
+      {
+        id: "t_eg", name: "Evil Geniuses", tag: "EG", region: "NA", seed: 5, checkedIn: true, approved: true,
+        contactEmail: "esports@evilgeniuses.gg", registrationNotes: "2023 Champions Roster",
+        igl: { name: "Kelden Pupello", inGameName: "Boostio#NA1", discordId: "boostio_eg", role: "IGL", isIgl: true },
+        members: [
+          { name: "Max Mazanov", inGameName: "Demon1#NA1", discordId: "demon1_eg", role: "DUELIST" },
+          { name: "Ethan Arnold", inGameName: "Ethan#NA1", discordId: "ethan_eg", role: "INITIATOR" },
+          { name: "Alexander Mor", inGameName: "jawgemo#NA1", discordId: "jawgemo_eg", role: "CONTROLLER" },
+          { name: "Corbin Lee", inGameName: "C0M#NA1", discordId: "c0m_eg", role: "INITIATOR" },
+        ],
+        sub: { name: "Jeffrey Tsang", inGameName: "Reformed#NA1", discordId: "reformed_eg", role: "SUB", isSub: true },
+      },
+      {
+        id: "t_navi", name: "Natus Vincere", tag: "NAVI", region: "EU", seed: 6, checkedIn: true, approved: true,
+        contactEmail: "admin@navi.gg", registrationNotes: "CIS/EMEA Masters Seed",
+        igl: { name: "Kyrylo Karasov", inGameName: "ANGE1#UA1", discordId: "ange1_navi", role: "IGL", isIgl: true },
+        members: [
+          { name: "Mehmet Yağız İpek", inGameName: "cNed#TR1", discordId: "cned_navi", role: "DUELIST" },
+          { name: "Andrey Kiprsky", inGameName: "Shao#EU1", discordId: "shao_navi", role: "INITIATOR" },
+          { name: "Dmitry Ilyushin", inGameName: "SUYGETSU#EU1", discordId: "suygetsu_navi", role: "SENTINEL" },
+          { name: "Pontus Eek", inGameName: "Zyppan#EU1", discordId: "zyppan_navi", role: "CONTROLLER" },
+        ],
+        sub: { name: "Ardis Svarenieks", inGameName: "ardiis#LV1", discordId: "ardiis_navi", role: "SUB", isSub: true },
+      },
+      {
+        id: "t_loud", name: "LOUD", tag: "LOUD", region: "SA", seed: 7, checkedIn: true, approved: true,
+        contactEmail: "contato@loud.gg", registrationNotes: "Champions Champions & Brazilian Seed 1",
+        igl: { name: "Matias Delipetro", inGameName: "Saadhak#AR1", discordId: "saadhak_loud", role: "IGL", isIgl: true },
+        members: [
+          { name: "Erick Santos", inGameName: "aspas#BR1", discordId: "aspas_loud", role: "DUELIST" },
+          { name: "Felipe Basso", inGameName: "Less#BR1", discordId: "less_loud", role: "SENTINEL" },
+          { name: "Cauan Silva", inGameName: "cauanzin#BR1", discordId: "cauanzin_loud", role: "INITIATOR" },
+          { name: "Arthur Vieira", inGameName: "tuyz#BR1", discordId: "tuyz_loud", role: "CONTROLLER" },
+        ],
+        sub: { name: "Gabriel Lino", inGameName: "qck#BR1", discordId: "qck_loud", role: "SUB", isSub: true },
+      },
+      {
+        id: "t_tl", name: "Team Liquid", tag: "TL", region: "EU", seed: 8, checkedIn: true, approved: true,
+        contactEmail: "admin@teamliquid.com", registrationNotes: "EMEA Invitational Top Contender",
+        igl: { name: "James Macauley", inGameName: "Kamo#EU1", discordId: "kamo_tl", role: "IGL", isIgl: true },
+        members: [
+          { name: "Elias Olkkonen", inGameName: "Jamppi#FI1", discordId: "jamppi_tl", role: "INITIATOR" },
+          { name: "Ayaz Murat", inGameName: "nAts#RU1", discordId: "nats_tl", role: "SENTINEL" },
+          { name: "Igor Vlasov", inGameName: "Redgar#EU1", discordId: "redgar_tl", role: "CONTROLLER" },
+          { name: "Georgio Sanassy", inGameName: "Keiko#UK1", discordId: "keiko_tl", role: "DUELIST" },
+        ],
+        sub: { name: "Dom Sulcas", inGameName: "soulcas#UK1", discordId: "soulcas_tl", role: "SUB", isSub: true },
+      },
     ];
+
     const t: Tournament = {
-      id: "TRN-0001", slug: "requiem-open-s1", name: "REQUIEM OPEN", season: "SEASON 01",
-      status: "REGISTRATION_OPEN", game: "Tactical 5v5", format: "Single Elimination · BO1",
-      prizePool: "$12,000", region: "GLOBAL", platform: "PC", slots: 8,
-      champion: null, createdAt: now, updatedAt: now,
-      startDate: "AUG 28, 2026", checkInWindow: "18:00 – 18:30 UTC",
-      prizeBreakdown: [["1ST", "$7,000"], ["2ND", "$3,000"], ["3RD–4TH", "$1,000"]],
-      teams: tags.map(([name, tag, region], i) => ({
-        id: `t${i + 1}`, name, tag, region, seed: null,
-        checkedIn: false, approved: false,
-      })),
+      id: "TRN-0001",
+      slug: "vanta-valorant-invitational-2026",
+      name: "VANTA VALORANT INVITATIONAL 2026",
+      season: "SEASON 01",
+      status: "BRACKET_LOCKED",
+      game: "VALORANT",
+      format: "Single Elimination Knockout · BO1",
+      prizePool: "$50,000",
+      region: "GLOBAL",
+      platform: "PC (Riot Competitive)",
+      slots: 8,
+      champion: null,
+      createdAt: now,
+      updatedAt: now,
+      startDate: "AUG 30, 2026",
+      checkInWindow: "18:00 – 18:30 UTC",
+      prizeBreakdown: [["1ST", "$30,000"], ["2ND", "$12,000"], ["3RD–4TH", "$4,000"]],
+      teams: valTeams,
       matches: [],
     } as Tournament;
+
+    // Generate standard knockout bracket
+    t.matches = generateBracket(t);
     await kv.set(TOURNAMENT_KEY, t);
 
     // Other events (directory cards).
     await kv.mset(
       ["event:TRN-0002", "event:TRN-0003", "event:TRN-0004"],
       [
-        { id: "TRN-0002", name: "MIDNIGHT CIRCUIT", game: "Tactical 5v5", format: "Double Elim · BO3", prize: "$25,000", slots: 16, registered: 11, status: "REGISTRATION_OPEN", region: "EU", closes: "SEP 04" },
-        { id: "TRN-0003", name: "VANGUARD SERIES", game: "MOBA 5v5", format: "Groups → Playoffs", prize: "$40,000", slots: 24, registered: 24, status: "REGISTRATION_CLOSED", region: "APAC", closes: "CLOSED" },
-        { id: "TRN-0004", name: "SILENT PROTOCOL", game: "Tactical 5v5", format: "Swiss · BO1", prize: "$8,000", slots: 32, registered: 6, status: "REGISTRATION_OPEN", region: "GLOBAL", closes: "SEP 18" },
+        { id: "TRN-0002", name: "MIDNIGHT CS2 CIRCUIT", game: "CS2", format: "Double Elim · BO3", prize: "$25,000", slots: 16, registered: 11, status: "REGISTRATION_OPEN", region: "EU", closes: "SEP 04" },
+        { id: "TRN-0003", name: "DOTA 2 VANGUARD CUP", game: "DOTA 2", format: "Single Elim · BO3", prize: "$40,000", slots: 8, registered: 8, status: "REGISTRATION_CLOSED", region: "APAC", closes: "CLOSED" },
+        { id: "TRN-0004", name: "VALORANT ASCENT PROTOCOL", game: "VALORANT", format: "Single Elim Knockout · BO1", prize: "$15,000", slots: 8, registered: 6, status: "REGISTRATION_OPEN", region: "GLOBAL", closes: "SEP 18" },
       ],
     );
 
@@ -306,9 +410,9 @@ app.post(`${P}/seed`, async (c) => {
     await kv.mset(
       ["result:TRN-9821", "result:TRN-9799", "result:TRN-9764"],
       [
-        { id: "TRN-9821", event: "PHANTOM CUP", winner: "Eclipse Order", runnerUp: "Nova Syndicate", score: "13–9", date: "2026-08-14" },
-        { id: "TRN-9799", event: "ZERO HOUR", winner: "Vermillion", runnerUp: "Obsidian Pact", score: "2–1", date: "2026-08-07" },
-        { id: "TRN-9764", event: "BLACKOUT INVITATIONAL", winner: "Meridian Nine", runnerUp: "Ashfall Collective", score: "13–6", date: "2026-07-30" },
+        { id: "TRN-9821", event: "VALORANT PHANTOM CUP", winner: "Sentinels", runnerUp: "Fnatic", score: "13–9", date: "2026-08-14" },
+        { id: "TRN-9799", event: "CS2 ZERO HOUR", winner: "Vermillion", runnerUp: "Obsidian Pact", score: "2–1", date: "2026-08-07" },
+        { id: "TRN-9764", event: "DOTA 2 BLACKOUT INVITATIONAL", winner: "Paper Rex", runnerUp: "DRX", score: "2–0", date: "2026-07-30" },
       ],
     );
 
@@ -641,6 +745,90 @@ async function runOp(
   profile: Profile, t: Tournament, action: string, body: any,
 ): Promise<string[]> {
   switch (action) {
+    case "create-tournament": {
+      requirePerm(profile, "tournaments.manage");
+      const { name, game, season, format, slots, prizePool, region } = body;
+      if (!name) throw new HttpError(400, "Tournament name is required");
+      t.name = String(name).trim();
+      t.game = String(game || "VALORANT").trim();
+      t.season = String(season || "SEASON 01").trim();
+      t.format = String(format || "Single Elimination Knockout · BO1").trim();
+      t.slots = Number(slots) || 8;
+      t.prizePool = String(prizePool || "$10,000").trim();
+      t.region = String(region || "GLOBAL").trim();
+      t.status = "DRAFT";
+      t.champion = null;
+      t.teams = [];
+      t.matches = [];
+      t.updatedAt = new Date().toISOString();
+      await audit(profile, "tournament.created", t.id, { name: t.name, game: t.game, slots: t.slots });
+      await notify("tournament.created", "Tournament created", `${t.name} (${t.game}) configured`);
+      return ["tournament.created"];
+    }
+    case "edit-tournament": {
+      requirePerm(profile, "tournaments.manage");
+      if (body.name) t.name = String(body.name).trim();
+      if (body.game) t.game = String(body.game).trim();
+      if (body.season) t.season = String(body.season).trim();
+      if (body.format) t.format = String(body.format).trim();
+      if (body.slots) t.slots = Number(body.slots);
+      if (body.prizePool) t.prizePool = String(body.prizePool).trim();
+      if (body.region) t.region = String(body.region).trim();
+      if (body.status) t.status = body.status;
+      t.updatedAt = new Date().toISOString();
+      await audit(profile, "tournament.edited", t.id, { name: t.name, game: t.game });
+      return ["tournament.edited"];
+    }
+    case "add-team": {
+      requirePerm(profile, "tournaments.manage");
+      const { name, tag, region, seed, igl, members, sub, contactEmail, registrationNotes } = body;
+      if (!name || !tag) throw new HttpError(400, "Team name and tag are required");
+      const cleanTag = String(tag).toUpperCase().trim();
+      if (t.teams.some((x) => x.tag === cleanTag)) throw new HttpError(409, `Team tag ${cleanTag} already exists`);
+      const newTeam: Team = {
+        id: `t_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        name: String(name).trim(),
+        tag: cleanTag,
+        region: String(region || t.region || "GLOBAL").toUpperCase().trim(),
+        seed: seed ? Number(seed) : null,
+        checkedIn: true,
+        approved: true,
+        igl: igl ? {
+          name: String(igl.name || "").trim(),
+          inGameName: String(igl.inGameName || "").trim(),
+          discordId: String(igl.discordId || "").trim(),
+          role: String(igl.role || "IGL").trim(),
+          isIgl: true,
+        } : undefined,
+        members: Array.isArray(members) ? members.map((m: any) => ({
+          name: String(m.name || "").trim(),
+          inGameName: String(m.inGameName || "").trim(),
+          discordId: String(m.discordId || "").trim(),
+          role: String(m.role || "MEMBER").trim(),
+        })) : [],
+        sub: sub ? {
+          name: String(sub.name || "").trim(),
+          inGameName: String(sub.inGameName || "").trim(),
+          discordId: String(sub.discordId || "").trim(),
+          role: "SUB",
+          isSub: true,
+        } : undefined,
+        contactEmail: contactEmail ? String(contactEmail).trim() : undefined,
+        registrationNotes: registrationNotes ? String(registrationNotes).trim() : undefined,
+      };
+      t.teams.push(newTeam);
+      t.updatedAt = new Date().toISOString();
+      await audit(profile, "team.added_admin", newTeam.id, { name: newTeam.name, tag: newTeam.tag });
+      return [`team.added:${newTeam.id}`];
+    }
+    case "remove-team": {
+      requirePerm(profile, "tournaments.manage");
+      const idx = t.teams.findIndex((x) => x.id === body.teamId);
+      if (idx === -1) throw new HttpError(404, "Team not found");
+      const [removed] = t.teams.splice(idx, 1);
+      await audit(profile, "team.removed_admin", removed.id, { name: removed.name });
+      return [`team.removed:${removed.id}`];
+    }
     case "transition": {
       requirePerm(profile, "tournaments.manage");
       const to = body.to as TournamentStatus;
@@ -680,9 +868,8 @@ async function runOp(
     }
     case "seed-teams": {
       requirePerm(profile, "seeding.manage");
-      if (t.status !== "SEEDING") throw new HttpError(409, "Tournament is not in SEEDING");
-      const eligible = t.teams.filter((x) => x.approved && x.checkedIn);
-      if (eligible.length !== 8) throw new HttpError(409, `Need 8 checked-in teams, have ${eligible.length}`);
+      const eligible = t.teams.filter((x) => x.approved);
+      if (eligible.length < 2) throw new HttpError(409, `Need at least 2 approved teams, have ${eligible.length}`);
       let order = [...eligible];
       if (body.method === "random") order = shuffle(order);
       // manual: keep given order if provided
@@ -691,10 +878,10 @@ async function runOp(
       }
       t.teams.forEach((x) => (x.seed = null));
       order.forEach((team, i) => {
-        const ref = t.teams.find((x) => x.id === team.id)!;
-        ref.seed = i + 1;
+        const ref = t.teams.find((x) => x.id === team.id);
+        if (ref) ref.seed = i + 1;
       });
-      await audit(profile, "seed.locked", t.id, { method: body.method ?? "manual" });
+      await audit(profile, "seed.locked", t.id, { method: body.method ?? "manual", count: order.length });
       return ["seed.locked"];
     }
     case "generate-bracket": {

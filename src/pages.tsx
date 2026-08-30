@@ -222,23 +222,95 @@ function MatchesTable({ t }: { t: any }) {
 
 function TeamsGrid({ t }: { t: any }) {
   const teams = t?.teams ?? [];
+  const [expandedTeam, setExpandedTeam] = useState<string | null>(null);
+
   if (teams.length === 0) return <Empty label="NO TEAMS REGISTERED YET" />;
   return (
-    <div className="grid gap-px border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
-      {teams.map((tm: any, i: number) => (
-        <Reveal key={tm.id} delay={i * 60}>
-          <div className="group relative bg-surface p-5 transition-colors hover:bg-surface-hover">
-            <HudCorners />
-            <div className="flex items-start justify-between">
-              <span className="font-mono text-xs text-accent">{tm.seed ? `#${tm.seed}` : "—"}</span>
-              <StatusChip status={tm.checkedIn ? "READY" : tm.approved ? "SCHEDULED" : "FORFEIT"} />
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {teams.map((tm: any, i: number) => {
+        const isExpanded = expandedTeam === tm.id;
+        return (
+          <Reveal key={tm.id} delay={i * 60}>
+            <div className="group relative border border-border bg-surface p-5 transition-all hover:border-accent/40">
+              <HudCorners />
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="border border-accent/40 bg-accent/10 px-2 py-0.5 font-mono text-[10px] font-bold text-accent">
+                    {tm.seed ? `SEED #${tm.seed}` : `TEAM #${i + 1}`}
+                  </span>
+                  <span className="font-mono text-[10px] text-muted">{tm.region}</span>
+                </div>
+                <StatusChip status={tm.checkedIn ? "READY" : tm.approved ? "SCHEDULED" : "FORFEIT"} />
+              </div>
+
+              <div className="mt-3">
+                <h3 className="font-display text-2xl font-black tracking-tight text-foreground">
+                  {tm.name}
+                </h3>
+                <div className="font-mono text-xs text-accent font-bold">[{tm.tag}]</div>
+              </div>
+
+              {/* IGL Display Banner */}
+              {tm.igl && (
+                <div className="mt-3 border border-border bg-background/60 p-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[9px] font-bold tracking-[0.15em] text-accent">👑 IGL (LEADER)</span>
+                    <span className="font-mono text-[9px] text-muted">DISCORD: {tm.igl.discordId || "N/A"}</span>
+                  </div>
+                  <div className="mt-1 font-display text-sm font-bold text-foreground">
+                    {tm.igl.name} <span className="font-mono text-xs font-normal text-accent">({tm.igl.inGameName})</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Roster preview / toggle */}
+              <div className="mt-3 border-t border-border/70 pt-2.5">
+                <button
+                  onClick={() => setExpandedTeam(isExpanded ? null : tm.id)}
+                  className="flex w-full items-center justify-between font-mono text-[10px] tracking-[0.1em] text-muted transition-colors hover:text-accent"
+                >
+                  <span>
+                    {isExpanded ? "▲ HIDE ROSTER LINEUP" : `▼ VIEW FULL ROSTER (${(tm.members?.length || 0) + (tm.igl ? 1 : 0)} + ${tm.sub ? "1 SUB" : "0 SUB"})`}
+                  </span>
+                  <span className="text-accent">{isExpanded ? "−" : "+"}</span>
+                </button>
+
+                {isExpanded && (
+                  <div className="mt-2.5 space-y-2 border-t border-border/40 pt-2">
+                    {/* Starters */}
+                    <div className="space-y-1">
+                      <div className="font-mono text-[9px] tracking-[0.1em] text-muted uppercase">STARTING LINEUP</div>
+                      {tm.members?.map((m: any, mi: number) => (
+                        <div key={mi} className="flex items-center justify-between bg-background/40 px-2 py-1 font-mono text-[10px]">
+                          <div>
+                            <span className="font-bold text-foreground">{m.name}</span>
+                            <span className="ml-1.5 text-accent">[{m.inGameName}]</span>
+                          </div>
+                          <span className="text-muted text-[9px]">@{m.discordId}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Sub if available */}
+                    {tm.sub && (
+                      <div className="border-t border-border/30 pt-1.5">
+                        <div className="font-mono text-[9px] tracking-[0.1em] text-warning uppercase">SUBSTITUTE</div>
+                        <div className="flex items-center justify-between bg-background/40 px-2 py-1 font-mono text-[10px]">
+                          <div>
+                            <span className="font-bold text-foreground">{tm.sub.name}</span>
+                            <span className="ml-1.5 text-warning">[{tm.sub.inGameName}]</span>
+                          </div>
+                          <span className="text-muted text-[9px]">@{tm.sub.discordId}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="mt-4 font-display text-xl font-extrabold">{tm.tag}</div>
-            <div className="text-sm text-muted">{tm.name}</div>
-            <div className="mt-3"><Mono>{tm.region}</Mono></div>
-          </div>
-        </Reveal>
-      ))}
+          </Reveal>
+        );
+      })}
     </div>
   );
 }
@@ -507,62 +579,100 @@ export function NewsPage() {
 
 // ---------- REGISTER ----------
 export function RegisterPage({ onLogin }: { onLogin: () => void }) {
-  const { profile } = useAuth();
-  const { data, refresh } = useSite();
-  const [name, setName] = useState("");
-  const [tag, setTag] = useState("");
-  const [region, setRegion] = useState("NA");
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
-  const input = "w-full border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-accent";
-  const open = data.tournament?.status === "REGISTRATION_OPEN";
-
-  async function submit() {
-    setBusy(true); setMsg(null);
-    try {
-      await api.registerTeam({ name, tag, region });
-      setMsg({ text: "Team registered. Awaiting admin approval.", ok: true });
-      setName(""); setTag("");
-      await refresh();
-    } catch (e) {
-      setMsg({ text: e instanceof Error ? e.message : String(e), ok: false });
-    } finally { setBusy(false); }
-  }
+  const { profile, effectiveRole } = useAuth();
+  const { data } = useSite();
+  const t = data.tournament;
+  const admin = effectiveRole !== "HUMAN";
 
   return (
     <>
-      <PageHead kicker={`${brand.codename} // ENTRY`} title="Register"
-        sub="Submit your team for the current operation. Registrations are reviewed and approved by tournament admins before roster lock." />
-      <section className="mx-auto max-w-lg px-5 py-16">
-        {!profile ? (
-          <div className="border border-border bg-surface p-8 text-center">
-            <Mono>AUTHENTICATION REQUIRED</Mono>
-            <p className="mt-3 text-sm text-muted">You must be signed in to register a team.</p>
-            <button onClick={onLogin} className={`${primary} mt-6`}>LOG IN / SIGN UP</button>
-          </div>
-        ) : !open ? (
-          <div className="border border-border bg-surface p-8 text-center">
-            <Mono>REGISTRATION CLOSED</Mono>
-            <p className="mt-3 text-sm text-muted">There is no tournament currently accepting registrations. Check back soon.</p>
-            <button onClick={() => navigate("tournaments")} className={`${ghost} mt-6`}>VIEW TOURNAMENTS</button>
-          </div>
-        ) : (
-          <div className="border border-border bg-surface p-8">
-            <div className="space-y-4">
-              <div><Mono>TEAM NAME</Mono><input className={`${input} mt-1.5`} value={name} onChange={(e) => setName(e.target.value)} placeholder="Requiem Esports" /></div>
-              <div><Mono>TAG</Mono><input className={`${input} mt-1.5`} value={tag} onChange={(e) => setTag(e.target.value.toUpperCase())} placeholder="RQM" maxLength={5} /></div>
-              <div><Mono>REGION</Mono>
-                <select className={`${input} mt-1.5`} value={region} onChange={(e) => setRegion(e.target.value)}>
-                  {["NA", "EU", "APAC", "SA", "MENA", "GLOBAL"].map((r) => <option key={r} value={r}>{r}</option>)}
-                </select>
+      <PageHead
+        kicker={`${brand.codename} // TOURNAMENT ENTRY`}
+        title="Registration"
+        sub="Official competitive team entry for tournament operations. All registrations are verified via the official Google Form and imported directly by tournament administrators."
+      />
+      <section className="mx-auto max-w-2xl px-5 py-12">
+        <div className="space-y-6">
+          {/* Active Tournament Info Card */}
+          {t && (
+            <div className="border border-accent/40 bg-accent/5 p-6">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[10px] font-bold text-accent uppercase tracking-wider">{t.game} · {t.season}</span>
+                <StatusChip status={t.status} />
               </div>
-              {msg && <div className={`font-mono text-[11px] ${msg.ok ? "text-success" : "text-danger"}`}>{msg.text}</div>}
-              <button onClick={submit} disabled={busy || !name || !tag} className={`${primary} w-full`}>
-                {busy ? "SUBMITTING…" : "SUBMIT REGISTRATION"}
+              <h2 className="mt-2 font-display text-2xl font-black text-foreground">{t.name}</h2>
+              <div className="mt-2 flex flex-wrap gap-4 font-mono text-xs text-muted">
+                <span>Slots: <strong className="text-foreground">{t.teams.length}/{t.slots}</strong></span>
+                <span>Format: <strong className="text-foreground">{t.format}</strong></span>
+                <span>Prize: <strong className="text-accent">{t.prizePool}</strong></span>
+              </div>
+            </div>
+          )}
+
+          {/* Official Google Form Submission Portal */}
+          <div className="border border-border bg-surface p-6">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">📋</span>
+              <h3 className="font-display text-lg font-bold">Official Registration Form Entry</h3>
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-muted">
+              To ensure roster integrity and direct verification of Riot accounts and Discord communications, all player submissions are collected through the official registration form.
+            </p>
+
+            <div className="mt-5 space-y-3 border-t border-border/70 pt-4">
+              <div className="font-mono text-[10px] font-bold tracking-[0.15em] text-accent">REQUIRED REGISTRATION DETAILS:</div>
+              <ul className="space-y-2 font-mono text-xs text-foreground/90">
+                <li className="flex items-start gap-2">
+                  <span className="text-accent">✓</span>
+                  <span><strong>Team Name & Tag</strong> (e.g. Sentinels [SEN])</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-accent">✓</span>
+                  <span><strong>Team IGL (In-Game Leader):</strong> Full Name, Valorant IGN + Tag (e.g. <code>TenZ#NA1</code>), Discord User ID</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-accent">✓</span>
+                  <span><strong>4 Starting Players:</strong> Full Name, In-Game Name + Tag, Discord User ID, Main Role</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-accent">✓</span>
+                  <span><strong>1 Substitute Player:</strong> Name, Valorant IGN + Tag, Discord User ID (Optional)</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <a
+                href="#google-form"
+                onClick={(e) => { e.preventDefault(); alert("Please contact your tournament administrator or submit your squad roster via the official Google Form link provided in Discord announcements."); }}
+                className={`${primary} text-center flex-1`}
+              >
+                OPEN OFFICIAL GOOGLE FORM ↗
+              </a>
+              <button
+                onClick={() => navigate("teams")}
+                className={`${ghost} text-center flex-1`}
+              >
+                VIEW REGISTERED SQUADS
               </button>
             </div>
           </div>
-        )}
+
+          {/* Admin shortcut if GOD or DEMI_GOD */}
+          {admin && (
+            <div className="border border-accent/60 bg-accent/10 p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-mono text-[10px] font-bold text-accent tracking-wider">ADMINISTRATOR CONTROL</div>
+                  <div className="text-sm font-bold text-foreground">Import & manage team registrations directly</div>
+                </div>
+                <button onClick={() => navigate("dashboard")} className="border border-accent px-4 py-2 font-mono text-xs font-bold text-accent hover:bg-accent/20">
+                  OPEN COMMAND CENTER →
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </section>
     </>
   );
@@ -614,6 +724,12 @@ export function DashboardPage({ onControl }: { onControl: () => void }) {
       setSaving(false);
     }
   }
+
+  const { data } = useSite();
+  const t = data.tournament;
+  const championTeam = t?.champion ? t.teams.find((x: any) => x.id === t.champion) : null;
+  const completedMatches = (t?.matches || []).filter((m: any) => m.status === "COMPLETED");
+  const liveMatches = (t?.matches || []).filter((m: any) => m.status === "LIVE");
 
   return (
     <>
@@ -674,36 +790,146 @@ export function DashboardPage({ onControl }: { onControl: () => void }) {
           <div className="border border-border bg-surface p-6 lg:col-span-2">
             <Mono>QUICK ACTIONS</Mono>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <button onClick={() => navigate("register")} className={ghost}>REGISTER A TEAM</button>
               <button onClick={() => navigate("tournament")} className={ghost}>VIEW LIVE BRACKET</button>
-              <button onClick={() => navigate("notifications")} className={ghost}>NOTIFICATIONS ({notifs.length})</button>
-              {admin
-                ? <button onClick={onControl} className={primary}>OPEN CONTROL CENTER</button>
-                : <button onClick={() => navigate("matches")} className={ghost}>BROWSE MATCHES</button>}
+              <button onClick={() => navigate("teams")} className={ghost}>VIEW TEAMS & ROSTERS</button>
+              <button onClick={() => navigate("matches")} className={ghost}>BROWSE MATCHES</button>
+              {admin ? (
+                <button onClick={onControl} className={primary}>OPEN CONTROL CENTER</button>
+              ) : (
+                <button onClick={() => navigate("tournaments")} className={ghost}>EXPLORE TOURNAMENTS</button>
+              )}
             </div>
           </div>
           <div className="border border-border bg-surface p-6">
-            <Mono>PERMISSIONS</Mono>
-            <div className="mt-4 flex flex-wrap gap-1.5">
-              {permissions.length === 0 && <Mono>None.</Mono>}
-              {permissions.map((p) => (
-                <span key={p} className="border border-border px-1.5 py-1 font-mono text-[9px] tracking-[0.1em] text-muted">{p}</span>
-              ))}
+            <Mono>OPERATOR ACCESS & PERMISSIONS</Mono>
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center justify-between border-b border-border/60 pb-2">
+                <span className="font-mono text-[10px] text-muted">PERSPECTIVE</span>
+                <span className="font-mono text-xs font-bold text-accent">{effectiveRole}</span>
+              </div>
+              <div className="flex flex-wrap gap-1 pt-1">
+                {permissions.map((p) => (
+                  <span key={p} className="border border-border px-1.5 py-0.5 font-mono text-[9px] tracking-[0.1em] text-muted">{p}</span>
+                ))}
+              </div>
             </div>
           </div>
         </div>
+
+        {/* TOURNAMENT MILESTONES & RECENT ACTIVITY */}
         <div className="mt-6 border border-border bg-surface p-6">
-          <SectionHeader index="01" title="Recent Activity" />
-          <div className="space-y-2">
-            {notifs.length === 0 && <Mono>No recent notifications.</Mono>}
-            {notifs.slice(0, 6).map((n, i) => (
-              <Reveal key={i} delay={i * 50}>
-                <div className="flex items-center justify-between border border-border px-4 py-2.5">
-                  <div className="flex items-center gap-3"><StatusChip status={n.severity ?? "INFO"} /><span className="text-sm">{n.title}</span></div>
-                  <Mono>{new Date(n.ts).toLocaleTimeString()}</Mono>
+          <SectionHeader index="01" title="Tournament Milestones & Activity" />
+          
+          <div className="space-y-4">
+            {/* Active Tournament Status Banner */}
+            {t && (
+              <div className="flex flex-col justify-between gap-3 border border-accent/40 bg-accent/5 p-4 sm:flex-row sm:items-center">
+                <div className="flex items-start gap-3">
+                  <span className="status-pulse mt-1 inline-block size-2 rounded-full bg-accent" />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[10px] font-bold text-accent uppercase tracking-wider">{t.game}</span>
+                      <span className="text-muted text-xs">·</span>
+                      <span className="font-mono text-[10px] text-muted">{t.season}</span>
+                    </div>
+                    <h3 className="font-display text-lg font-black tracking-tight">{t.name}</h3>
+                    <div className="font-mono text-xs text-muted">
+                      {t.teams.length} Teams Registered · {t.format} · Prize Pool: <span className="text-accent">{t.prizePool}</span>
+                    </div>
+                  </div>
                 </div>
-              </Reveal>
-            ))}
+                <div className="flex items-center gap-3">
+                  <StatusChip status={t.status} />
+                  <button onClick={() => navigate("tournament")} className="border border-accent px-3 py-1.5 font-mono text-[10px] font-bold tracking-[0.15em] text-accent hover:bg-accent/10">
+                    VIEW BRACKET →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Champion Declaration if completed */}
+            {championTeam && (
+              <div className="flex items-center justify-between border border-accent bg-surface p-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">👑</span>
+                  <div>
+                    <div className="font-mono text-[10px] tracking-[0.15em] text-accent">OFFICIAL TOURNAMENT CHAMPION</div>
+                    <div className="font-display text-base font-bold text-foreground">
+                      {championTeam.name} [{championTeam.tag}] — {t?.name}
+                    </div>
+                  </div>
+                </div>
+                <span className="font-mono text-xs font-bold text-accent">{t?.prizePool} 1ST PLACE</span>
+              </div>
+            )}
+
+            {/* Live Matches if any */}
+            {liveMatches.length > 0 && (
+              <div className="space-y-2">
+                <div className="font-mono text-[10px] tracking-[0.15em] text-accent font-bold">⚡ MATCHES CURRENTLY LIVE</div>
+                {liveMatches.map((m: any) => {
+                  const teamA = t?.teams.find((x: any) => x.id === m.a);
+                  const teamB = t?.teams.find((x: any) => x.id === m.b);
+                  return (
+                    <div key={m.id} className="flex items-center justify-between border border-border bg-background/50 px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <StatusChip status="LIVE" />
+                        <span className="font-mono text-xs text-muted">{m.round}</span>
+                        <span className="font-display text-sm font-bold">
+                          {teamA?.name ?? "TBD"} <span className="text-accent">vs</span> {teamB?.name ?? "TBD"}
+                        </span>
+                      </div>
+                      <div className="font-mono text-sm font-bold text-accent">
+                        {m.scoreA ?? 0} — {m.scoreB ?? 0}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Completed Tournament Results & Match Outcomes */}
+            <div className="space-y-2">
+              <div className="font-mono text-[10px] tracking-[0.15em] text-muted uppercase">TOURNAMENT ARCHIVES & COMPLETED EVENTS</div>
+              {(data.results || []).slice(0, 4).map((r: any) => (
+                <div key={r.id} className="flex flex-col justify-between gap-2 border border-border bg-surface px-4 py-3 sm:flex-row sm:items-center">
+                  <div className="flex items-center gap-3">
+                    <StatusChip status="COMPLETED" />
+                    <div>
+                      <span className="font-display text-sm font-bold">{r.event}</span>
+                      <span className="ml-2 font-mono text-xs text-muted">
+                        Winner: <span className="font-bold text-accent">{r.winner}</span> (Defeated {r.runnerUp} {r.score})
+                      </span>
+                    </div>
+                  </div>
+                  <Mono className="text-[10px] text-muted">{r.date}</Mono>
+                </div>
+              ))}
+            </div>
+
+            {/* Upcoming Tournaments */}
+            {(data.events || []).length > 0 && (
+              <div className="space-y-2 pt-2">
+                <div className="font-mono text-[10px] tracking-[0.15em] text-muted uppercase">UPCOMING TOURNAMENT SCHEDULE</div>
+                {(data.events || []).slice(0, 3).map((e: any) => (
+                  <div key={e.id} className="flex flex-col justify-between gap-2 border border-border bg-surface/60 px-4 py-3 sm:flex-row sm:items-center">
+                    <div className="flex items-center gap-3">
+                      <span className="border border-border px-1.5 py-0.5 font-mono text-[9px] text-accent">{e.game}</span>
+                      <div>
+                        <span className="font-display text-sm font-bold">{e.name}</span>
+                        <span className="ml-2 font-mono text-xs text-muted">
+                          {e.format} · Prize: <span className="text-foreground">{e.prize}</span>
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <StatusChip status={e.status} />
+                      <Mono className="text-[10px]">{e.region}</Mono>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </section>

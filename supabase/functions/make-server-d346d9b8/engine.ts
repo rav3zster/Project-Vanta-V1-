@@ -9,9 +9,29 @@ export type TournamentStatus =
 export type MatchStatus =
   | "SCHEDULED" | "READY" | "LIVE" | "COMPLETED" | "FORFEIT" | "DISPUTED";
 
+export type TeamMember = {
+  name: string;
+  inGameName: string; // e.g. TenZ#NA1
+  discordId?: string; // e.g. tenz_official
+  role?: string;      // e.g. IGL, DUELIST, CONTROLLER, etc.
+  isIgl?: boolean;
+  isSub?: boolean;
+};
+
 export type Team = {
-  id: string; name: string; tag: string; region: string;
-  seed: number | null; checkedIn: boolean; approved: boolean;
+  id: string;
+  name: string;
+  tag: string;
+  region: string;
+  seed: number | null;
+  checkedIn: boolean;
+  approved: boolean;
+  igl?: TeamMember;
+  members?: TeamMember[];
+  sub?: TeamMember;
+  ownerId?: string;
+  contactEmail?: string;
+  registrationNotes?: string;
 };
 
 export type Match = {
@@ -34,13 +54,13 @@ export type Tournament = {
 
 // Legal state transitions. Any other change is rejected server-side.
 const TRANSITIONS: Record<TournamentStatus, TournamentStatus[]> = {
-  DRAFT: ["REGISTRATION_OPEN", "CANCELLED"],
-  REGISTRATION_OPEN: ["REGISTRATION_CLOSED", "CANCELLED"],
-  REGISTRATION_CLOSED: ["ROSTER_LOCK", "CANCELLED"],
-  ROSTER_LOCK: ["CHECK_IN_OPEN", "CANCELLED"],
-  CHECK_IN_OPEN: ["CHECK_IN_CLOSED", "CANCELLED"],
-  CHECK_IN_CLOSED: ["SEEDING", "CANCELLED"],
-  SEEDING: ["BRACKET_LOCKED", "CANCELLED"],
+  DRAFT: ["REGISTRATION_OPEN", "CHECK_IN_OPEN", "SEEDING", "CANCELLED"],
+  REGISTRATION_OPEN: ["REGISTRATION_CLOSED", "CHECK_IN_OPEN", "CANCELLED"],
+  REGISTRATION_CLOSED: ["ROSTER_LOCK", "CHECK_IN_OPEN", "CANCELLED"],
+  ROSTER_LOCK: ["CHECK_IN_OPEN", "SEEDING", "CANCELLED"],
+  CHECK_IN_OPEN: ["CHECK_IN_CLOSED", "SEEDING", "CANCELLED"],
+  CHECK_IN_CLOSED: ["SEEDING", "BRACKET_LOCKED", "CANCELLED"],
+  SEEDING: ["BRACKET_LOCKED", "LIVE", "CANCELLED"],
   BRACKET_LOCKED: ["LIVE", "CANCELLED"],
   LIVE: ["COMPLETED", "CANCELLED"],
   COMPLETED: [],
@@ -61,10 +81,31 @@ export function assertTransition(t: Tournament, to: TournamentStatus): void {
 const SEED_PAIRS: [number, number][] = [[1, 8], [4, 5], [2, 7], [3, 6]];
 
 export function generateBracket(t: Tournament): Match[] {
-  const bySeed = (s: number) => t.teams.find((x) => x.seed === s)?.id ?? null;
+  const eligible = t.teams.filter((x) => x.approved);
+  const teamsList = eligible.length > 0 ? eligible : t.teams;
+  const bySeed = (s: number) => teamsList.find((x) => x.seed === s)?.id ?? teamsList[s - 1]?.id ?? null;
+  const count = teamsList.length;
 
+  if (count <= 4) {
+    // 4 teams: 2 Semifinals (1v4, 2v3) -> Final
+    const fin: Match = base("M-F1", "FINAL", 1, null);
+    const sf1: Match = {
+      ...base("M-SF1", "SEMIFINAL", 1, ["M-F1", "a"]),
+      a: bySeed(1),
+      b: bySeed(4) ?? bySeed(2),
+      status: "READY",
+    };
+    const sf2: Match = {
+      ...base("M-SF2", "SEMIFINAL", 2, ["M-F1", "b"]),
+      a: bySeed(2) ?? bySeed(3),
+      b: bySeed(3) ?? bySeed(4),
+      status: "READY",
+    };
+    return [sf1, sf2, fin];
+  }
+
+  // 8 teams standard single elimination
   const matches: Match[] = [];
-  // Semis + final first so QFs can reference them via `feeds`.
   const sf1: Match = base("M-SF1", "SEMIFINAL", 1, ["M-F1", "a"]);
   const sf2: Match = base("M-SF2", "SEMIFINAL", 2, ["M-F1", "b"]);
   const fin: Match = base("M-F1", "FINAL", 1, null);

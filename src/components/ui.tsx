@@ -71,7 +71,7 @@ export function PlayerCard({
       onClick={onClick}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
-      className={`group relative flex flex-col border bg-surface transition-all duration-300 ${
+      className={`group relative flex h-full flex-col border bg-surface transition-all duration-300 ${
         onClick ? "cursor-pointer select-none" : ""
       } ${
         isSelected
@@ -116,26 +116,34 @@ export function PlayerCard({
           </div>
         )}
       </div>
-      <div className="relative z-10 flex flex-1 flex-col justify-between p-5">
+
+      {/* Info section — always same height across all cards */}
+      <div className="relative z-10 flex flex-1 flex-col p-5">
+        {/* Identity — handle + region on same row, name always reserves 1 line */}
         <div>
           <div className="flex items-baseline justify-between gap-2">
             <h3 className="font-display text-2xl font-black tracking-tight">{p.handle}</h3>
             <Mono className="text-[10px]">{p.region}</Mono>
           </div>
-          <div className="text-sm text-muted">{p.name}</div>
-        </div>
-
-        <div className="mt-4 flex items-center justify-between border-t border-border/80 pt-3">
-          <span className="font-mono text-[10px] tracking-[0.15em] text-muted">EARNINGS</span>
-          <span className="font-mono text-xs font-bold text-accent">{p.winnings || "$0"}</span>
-        </div>
-
-        {onClick && (
-          <div className="mt-2.5 flex items-center justify-between border-t border-border/40 pt-2 font-mono text-[9px] tracking-[0.15em] text-muted transition-colors group-hover:text-accent">
-            <span>{isSelected ? "● ACTIVE SELECTION" : "VIEW STATS & GEAR"}</span>
-            <span>{isSelected ? "←" : "→"}</span>
+          {/* Fixed-height name row — keeps card uniform even when name is absent */}
+          <div className="mt-0.5 h-5 truncate text-sm leading-5 text-muted">
+            {p.name || "\u00a0"}
           </div>
-        )}
+        </div>
+
+        {/* Footer pinned to bottom — no justify-between gaps */}
+        <div className="mt-auto">
+          <div className="flex items-center justify-between border-t border-border/80 pt-3">
+            <span className="font-mono text-[10px] tracking-[0.15em] text-muted">EARNINGS</span>
+            <span className="font-mono text-xs font-bold text-accent">{p.winnings || "$0"}</span>
+          </div>
+          {onClick && (
+            <div className="mt-2 flex items-center justify-between border-t border-border/40 pt-2 font-mono text-[9px] tracking-[0.15em] text-muted transition-colors group-hover:text-accent">
+              <span>{isSelected ? "● ACTIVE SELECTION" : "VIEW STATS & GEAR"}</span>
+              <span>{isSelected ? "←" : "→"}</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

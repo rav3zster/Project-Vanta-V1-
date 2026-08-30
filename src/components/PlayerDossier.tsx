@@ -248,20 +248,27 @@ export function PlayerDossier({ player, onClose }: PlayerDossierProps) {
 
             {/* Crosshair Profile Strip */}
             <div className="border border-border bg-surface-secondary p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 pb-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[10px] tracking-[0.15em] text-accent font-bold">CROSSHAIR PROFILE CODE</span>
-                  <span className="text-[10px] font-mono text-muted">· Official Match Config</span>
+              <div className="flex items-center justify-between gap-3 border-b border-border/70 pb-2.5">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="shrink-0 font-mono text-[10px] font-bold tracking-[0.15em] text-accent">
+                    CROSSHAIR PROFILE CODE
+                  </span>
+                  <span className="hidden truncate font-mono text-[10px] text-muted sm:block">
+                    · Official Match Config
+                  </span>
                 </div>
                 <button
                   onClick={handleCopyCrosshair}
-                  className="bg-accent px-3 py-1 font-mono text-[10px] font-bold tracking-[0.1em] text-accent-foreground transition-opacity hover:opacity-90 active:scale-95"
+                  className="shrink-0 bg-accent px-2.5 py-1 font-mono text-[9px] font-bold tracking-[0.1em] text-accent-foreground transition-opacity hover:opacity-90 active:scale-95"
                 >
-                  {copiedCode ? "✓ COPIED TO CLIPBOARD" : "📋 COPY CROSSHAIR CODE"}
+                  {copiedCode ? "✓ COPIED" : "📋 COPY CODE"}
                 </button>
               </div>
-              <div className="mt-2.5 overflow-x-auto bg-background/90 p-2.5 font-mono text-[11px] text-muted selection:bg-accent selection:text-background">
-                <code>{telemetry.settings.crosshair}</code>
+              {/* break-all wraps the code string inside the box — no horizontal overflow */}
+              <div className="mt-2.5 rounded-sm bg-background/90 p-2.5">
+                <code className="block break-all font-mono text-[11px] leading-relaxed text-muted selection:bg-accent selection:text-background">
+                  {telemetry.settings.crosshair}
+                </code>
               </div>
             </div>
           </div>

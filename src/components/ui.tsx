@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { Player } from "../lib/supabase";
+import { Reveal, Scramble, HudCorners } from "./Reveal";
 
 const STATUS_STYLES: Record<string, string> = {
   LIVE: "text-accent border-accent/40 bg-accent/5",
@@ -38,15 +39,15 @@ export function SectionHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="mb-8 flex items-end justify-between border-b border-border pb-4">
+    <Reveal sweep className="mb-8 flex items-end justify-between border-b border-border pb-4">
       <div className="flex items-baseline gap-4">
-        <span className="font-mono text-xs tracking-[0.25em] text-accent">{index}</span>
+        <Scramble text={index} className="font-mono text-xs tracking-[0.25em] text-accent tabular-nums" />
         <h2 className="font-display text-2xl font-extrabold tracking-tight uppercase sm:text-3xl">
           {title}
         </h2>
       </div>
       {action}
-    </div>
+    </Reveal>
   );
 }
 
@@ -68,6 +69,8 @@ export function PlayerCard({
   return (
     <div
       onClick={onClick}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
       className={`group relative flex flex-col border bg-surface transition-all duration-300 ${
         onClick ? "cursor-pointer select-none" : ""
       } ${
@@ -76,6 +79,7 @@ export function PlayerCard({
           : "border-border hover:border-accent/60 hover:bg-surface-hover"
       }`}
     >
+      <HudCorners />
       <div className="grain relative aspect-[4/5] w-full overflow-hidden border-b border-border bg-[#0a0b0d]">
         {p.image ? (
           <>

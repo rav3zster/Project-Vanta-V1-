@@ -17,6 +17,8 @@ import {
 import { StatusChip, SectionHeader, Mono, PlayerCard } from "./components/ui";
 import { Bracket } from "./components/Bracket";
 import { ThemeSwitcher } from "./components/ThemeSwitcher";
+import { Reveal, CountUp, HudCorners } from "./components/Reveal";
+import { useInView } from "./lib/motion";
 
 const NAV: { label: string; route: Route }[] = [
   { label: "TOURNAMENTS", route: "tournaments" },
@@ -74,11 +76,14 @@ function Nav({ onLogin, onControl, route }: { onLogin: () => void; onControl: ()
             <button
               key={n.route}
               onClick={() => navigate(n.route)}
-              className={`font-mono text-[11px] tracking-[0.15em] transition-colors hover:text-foreground ${
+              className={`relative py-1 font-mono text-[11px] tracking-[0.15em] transition-colors hover:text-foreground ${
                 route === n.route ? "text-accent font-bold" : "text-muted"
               }`}
             >
               {n.label}
+              {route === n.route && (
+                <span className="tab-underline absolute inset-x-0 -bottom-1 h-0.5 bg-accent" />
+              )}
             </button>
           ))}
         </nav>
@@ -314,60 +319,72 @@ function Hero() {
   const { data } = useSite();
   const t = data.tournament;
   const s = data.stats;
+  const [statsRef, statsInView] = useInView<HTMLDivElement>();
+
   return (
     <section className="grain relative overflow-hidden border-b border-border">
       <div className="relative z-10 mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-5 sm:py-20 lg:grid-cols-[1.4fr_1fr] lg:py-28">
         <div>
-          <div className="mb-4 sm:mb-6 flex items-center gap-2.5 sm:gap-3">
+          <Reveal className="mb-4 sm:mb-6 flex items-center gap-2.5 sm:gap-3">
             <span className="status-pulse inline-block size-2 rounded-full bg-accent" />
             <Mono className="text-accent text-[10px] sm:text-xs">{t ? `LIVE OPERATION // ${t.name}` : "OPERATIONS TERMINAL"}</Mono>
-          </div>
-          <h1 className="font-display text-[15vw] leading-[0.82] font-black tracking-tighter uppercase sm:text-8xl lg:text-9xl">
-            PROJECT<br /><span className="text-accent">V</span><span className="bg-accent text-accent-foreground px-1.5 sm:px-2.5 ml-1 inline-block">1</span>
-          </h1>
+          </Reveal>
+          <Reveal delay={80}>
+            <h1 className="font-display text-[15vw] leading-[0.82] font-black tracking-tighter uppercase sm:text-8xl lg:text-9xl">
+              PROJECT<br /><span className="text-accent">V</span><span className="bg-accent text-accent-foreground px-1.5 sm:px-2.5 ml-1 inline-block">1</span>
+            </h1>
+          </Reveal>
           <div className="mt-6 sm:mt-8 flex flex-wrap gap-x-3 sm:gap-x-4 gap-y-1">
-            {brand.tagline.map((tg) => (
-              <span key={tg} className="font-display text-base font-bold tracking-wide sm:text-2xl">{tg}</span>
+            {brand.tagline.map((tg, i) => (
+              <Reveal key={tg} delay={160 + i * 60} className="inline-block">
+                <span className="font-display text-base font-bold tracking-wide sm:text-2xl">{tg}</span>
+              </Reveal>
             ))}
           </div>
-          <p className="mt-4 sm:mt-6 max-w-md text-xs sm:text-sm leading-relaxed text-muted">
-            An esports operating platform. Registration, check-in, seeding, brackets and live match
-            operations — run a real tournament without spreadsheets.
-          </p>
-          <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3">
-            <button onClick={() => navigate("tournaments")} className="bg-accent px-6 py-3 font-mono text-xs font-bold tracking-[0.15em] text-accent-foreground transition-opacity hover:opacity-90 text-center">
+          <Reveal delay={280}>
+            <p className="mt-4 sm:mt-6 max-w-md text-xs sm:text-sm leading-relaxed text-muted">
+              An esports operating platform. Registration, check-in, seeding, brackets and live match
+              operations — run a real tournament without spreadsheets.
+            </p>
+          </Reveal>
+          <Reveal delay={340} className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3">
+            <button onClick={() => navigate("tournaments")} className="btn-sweep bg-accent px-6 py-3 font-mono text-xs font-bold tracking-[0.15em] text-accent-foreground transition-opacity hover:opacity-90 text-center">
               VIEW TOURNAMENTS
             </button>
-            <button onClick={() => navigate("register")} className="border border-border-strong px-6 py-3 font-mono text-xs tracking-[0.15em] text-foreground transition-colors hover:bg-surface-hover text-center">
+            <button onClick={() => navigate("register")} className="btn-sweep border border-border-strong px-6 py-3 font-mono text-xs tracking-[0.15em] text-foreground transition-colors hover:bg-surface-hover text-center">
               REGISTER TEAM
             </button>
-          </div>
+          </Reveal>
         </div>
 
-        <div className="flex flex-col justify-between border border-border bg-surface/60 p-4 sm:p-5">
-          <div className="flex items-center justify-between border-b border-border pb-3">
-            <Mono className="text-[10px] sm:text-xs">SYSTEM STATUS</Mono>
-            <StatusChip status={t ? "LIVE" : "SCHEDULED"} />
+        <Reveal delay={120} sweep className="flex flex-col justify-between border border-border bg-surface/60 p-4 sm:p-5">
+          <div ref={statsRef} className="contents">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <Mono className="text-[10px] sm:text-xs">SYSTEM STATUS</Mono>
+              <StatusChip status={t ? "LIVE" : "SCHEDULED"} />
+            </div>
+            <dl className="my-4 space-y-3">
+              {[
+                ["ACTIVE TOURNAMENTS", s.activeTournaments],
+                ["LIVE MATCHES", s.liveMatches],
+                ["REGISTERED TEAMS", s.registeredTeams],
+                ["ACTIVE PLAYERS", s.activePlayers],
+                ["OPEN DISPUTES", s.openDisputes],
+              ].map(([k, v]) => (
+                <div key={k as string} className="flex items-center justify-between">
+                  <dt className="font-mono text-[10px] sm:text-[11px] tracking-[0.1em] text-muted">{k}</dt>
+                  <dd className="font-display text-xl sm:text-2xl font-extrabold tabular-nums">
+                    <CountUp value={v as number} start={statsInView} />
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <div className="border-t border-border pt-3 font-mono text-[9px] sm:text-[10px] text-muted flex items-center justify-between">
+              <span>{t?.id ?? "TRN-0001"}</span>
+              <span>UPTIME 99.98%</span>
+            </div>
           </div>
-          <dl className="my-4 space-y-3">
-            {[
-              ["ACTIVE TOURNAMENTS", s.activeTournaments],
-              ["LIVE MATCHES", s.liveMatches],
-              ["REGISTERED TEAMS", s.registeredTeams],
-              ["ACTIVE PLAYERS", s.activePlayers],
-              ["OPEN DISPUTES", s.openDisputes],
-            ].map(([k, v]) => (
-              <div key={k as string} className="flex items-center justify-between">
-                <dt className="font-mono text-[10px] sm:text-[11px] tracking-[0.1em] text-muted">{k}</dt>
-                <dd className="font-display text-xl sm:text-2xl font-extrabold tabular-nums">{v}</dd>
-              </div>
-            ))}
-          </dl>
-          <div className="border-t border-border pt-3 font-mono text-[9px] sm:text-[10px] text-muted flex items-center justify-between">
-            <span>{t?.id ?? "TRN-0001"}</span>
-            <span>UPTIME 99.98%</span>
-          </div>
-        </div>
+        </Reveal>
       </div>
     </section>
   );
@@ -383,23 +400,26 @@ function LiveNow() {
     <section className="mx-auto max-w-7xl px-5 py-16">
       <SectionHeader index="01" title="Live Now" action={<StatusChip status="LIVE" />} />
       <div className="grid gap-4 md:grid-cols-2">
-        {live.map((m: any) => {
+        {live.map((m: any, i: number) => {
           const a = teams.find((tm: any) => tm.id === m.a);
           const b = teams.find((tm: any) => tm.id === m.b);
           return (
-            <div key={m.id} className="flex items-center justify-between border border-border bg-surface p-5 transition-colors hover:border-border-strong">
-              <div className="flex items-center gap-5">
-                <div className="text-right"><div className="font-display text-lg font-bold">{a?.tag}</div><Mono>{a?.name}</Mono></div>
-                <div className="font-mono text-2xl font-bold tabular-nums text-foreground">
-                  {m.scoreA}<span className="mx-1.5 text-border-strong">:</span>{m.scoreB}
+            <Reveal key={m.id} delay={i * 70}>
+              <div className="group relative flex items-center justify-between border border-border bg-surface p-5 transition-colors hover:border-border-strong">
+                <HudCorners />
+                <div className="flex items-center gap-5">
+                  <div className="text-right"><div className="font-display text-lg font-bold">{a?.tag}</div><Mono>{a?.name}</Mono></div>
+                  <div className="font-mono text-2xl font-bold tabular-nums text-foreground">
+                    {m.scoreA}<span className="mx-1.5 text-border-strong">:</span>{m.scoreB}
+                  </div>
+                  <div><div className="font-display text-lg font-bold">{b?.tag}</div><Mono>{b?.name}</Mono></div>
                 </div>
-                <div><div className="font-display text-lg font-bold">{b?.tag}</div><Mono>{b?.name}</Mono></div>
+                <div className="text-right">
+                  <StatusChip status={m.status} />
+                  <div className="mt-2"><Mono>{m.id} · {m.server}</Mono></div>
+                </div>
               </div>
-              <div className="text-right">
-                <StatusChip status={m.status} />
-                <div className="mt-2"><Mono>{m.id} · {m.server}</Mono></div>
-              </div>
-            </div>
+            </Reveal>
           );
         })}
       </div>
@@ -429,9 +449,11 @@ function FeaturedTournament() {
             ))}
           </div>
         </div>
-        <Bracket teams={t.teams} matches={t.matches} />
+        <Reveal sweep>
+          <Bracket teams={t.teams} matches={t.matches} />
+        </Reveal>
         <div className="mt-6 flex justify-end">
-          <button onClick={() => navigate("tournament")} className="font-mono text-[11px] tracking-[0.15em] text-muted hover:text-accent">FULL TOURNAMENT VIEW →</button>
+          <button onClick={() => navigate("tournament")} className="font-mono text-[11px] tracking-[0.15em] text-muted transition-colors hover:text-accent">FULL TOURNAMENT VIEW →</button>
         </div>
       </div>
     </section>
@@ -446,21 +468,27 @@ function Upcoming() {
       <SectionHeader index="02" title="Upcoming"
         action={<button onClick={() => navigate("tournaments")} className="font-mono text-[11px] tracking-[0.15em] text-muted hover:text-accent">ALL EVENTS →</button>} />
       <div className="grid gap-4 md:grid-cols-3">
-        {data.events.map((u) => (
-          <div key={u.id} className="group flex flex-col border border-border bg-surface p-5 transition-colors hover:border-border-strong">
-            <div className="flex items-center justify-between"><Mono>{u.id}</Mono><StatusChip status={u.status} /></div>
-            <h3 className="mt-4 font-display text-2xl font-extrabold tracking-tight">{u.name}</h3>
-            <div className="mt-1 text-sm text-muted">{u.game} · {u.format}</div>
-            <div className="mt-6 grid grid-cols-2 gap-3 border-t border-border pt-4">
-              <div><Mono>PRIZE</Mono><div className="font-display text-lg font-bold text-accent">{u.prize}</div></div>
-              <div><Mono>SLOTS</Mono><div className="font-mono text-lg tabular-nums">{u.registered}/{u.slots}</div></div>
-              <div><Mono>REGION</Mono><div className="font-mono text-sm">{u.region}</div></div>
-              <div><Mono>CLOSES</Mono><div className="font-mono text-sm">{u.closes}</div></div>
+        {data.events.map((u, i) => (
+          <Reveal key={u.id} delay={i * 70}>
+            <div className="group relative flex flex-col border border-border bg-surface p-5 transition-colors hover:border-border-strong">
+              <HudCorners />
+              <div className="flex items-center justify-between"><Mono>{u.id}</Mono><StatusChip status={u.status} /></div>
+              <h3 className="mt-4 font-display text-2xl font-extrabold tracking-tight">{u.name}</h3>
+              <div className="mt-1 text-sm text-muted">{u.game} · {u.format}</div>
+              <div className="mt-6 grid grid-cols-2 gap-3 border-t border-border pt-4">
+                <div><Mono>PRIZE</Mono><div className="font-display text-lg font-bold text-accent">{u.prize}</div></div>
+                <div><Mono>SLOTS</Mono><div className="font-mono text-lg tabular-nums">{u.registered}/{u.slots}</div></div>
+                <div><Mono>REGION</Mono><div className="font-mono text-sm">{u.region}</div></div>
+                <div><Mono>CLOSES</Mono><div className="font-mono text-sm">{u.closes}</div></div>
+              </div>
+              <div className="mt-4 h-px bg-border overflow-hidden">
+                <div
+                  className="h-px bg-accent transition-[width] duration-700 ease-out"
+                  style={{ width: `${Math.min(100, (u.registered / u.slots) * 100)}%` }}
+                />
+              </div>
             </div>
-            <div className="mt-4 h-px bg-border">
-              <div className="h-px bg-accent" style={{ width: `${Math.min(100, (u.registered / u.slots) * 100)}%` }} />
-            </div>
-          </div>
+          </Reveal>
         ))}
       </div>
     </section>
@@ -475,16 +503,18 @@ function Results() {
       <div className="mx-auto max-w-7xl px-5 py-16">
         <SectionHeader index="03" title="Latest Results" />
         <div className="divide-y divide-border border border-border">
-          {data.results.map((r) => (
-            <div key={r.id} className="grid grid-cols-2 items-center gap-4 px-5 py-4 transition-colors hover:bg-surface-hover sm:grid-cols-[120px_1fr_auto_100px]">
-              <Mono>{r.id}</Mono>
-              <div>
-                <div className="font-display text-lg font-bold">{r.event}</div>
-                <div className="text-sm text-muted"><span className="text-accent">{r.winner}</span> def. {r.runnerUp}</div>
+          {data.results.map((r, i) => (
+            <Reveal key={r.id} delay={i * 50}>
+              <div className="grid grid-cols-2 items-center gap-4 px-5 py-4 transition-colors hover:bg-surface-hover sm:grid-cols-[120px_1fr_auto_100px]">
+                <Mono>{r.id}</Mono>
+                <div>
+                  <div className="font-display text-lg font-bold">{r.event}</div>
+                  <div className="text-sm text-muted"><span className="text-accent">{r.winner}</span> def. {r.runnerUp}</div>
+                </div>
+                <div className="font-mono text-lg tabular-nums">{r.score}</div>
+                <div className="text-right"><Mono>{new Date(r.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</Mono></div>
               </div>
-              <div className="font-mono text-lg tabular-nums">{r.score}</div>
-              <div className="text-right"><Mono>{new Date(r.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</Mono></div>
-            </div>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -499,8 +529,10 @@ function Roster() {
     <section className="mx-auto max-w-7xl px-5 py-16">
       <SectionHeader index="04" title="Our Roster" />
       <div className="grid gap-px border border-border bg-border sm:grid-cols-2 lg:grid-cols-5">
-        {data.roster.map((p) => (
-          <PlayerCard key={p.handle} p={p} />
+        {data.roster.map((p, i) => (
+          <Reveal key={p.handle} delay={i * 60}>
+            <PlayerCard p={p} />
+          </Reveal>
         ))}
       </div>
     </section>
@@ -515,17 +547,19 @@ function Announcements() {
       <div className="mx-auto max-w-7xl px-5 py-16">
         <SectionHeader index="05" title="Announcements" />
         <div className="space-y-3">
-          {data.announcements.slice(0, 5).map((a) => (
-            <div key={a.id} className="flex flex-col gap-2 border border-border bg-surface p-5 transition-colors hover:border-border-strong sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-4">
-                <StatusChip status={a.severity} />
-                <div>
-                  <div className="font-display text-base font-bold">{a.title}</div>
-                  <div className="mt-0.5 text-sm text-muted">{a.body}</div>
+          {data.announcements.slice(0, 5).map((a, i) => (
+            <Reveal key={a.id} delay={i * 60}>
+              <div className="flex flex-col gap-2 border border-border bg-surface p-5 transition-colors hover:border-border-strong sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-4">
+                  <StatusChip status={a.severity} />
+                  <div>
+                    <div className="font-display text-base font-bold">{a.title}</div>
+                    <div className="mt-0.5 text-sm text-muted">{a.body}</div>
+                  </div>
                 </div>
+                <Mono className="shrink-0">{new Date(a.ts).toLocaleString()}</Mono>
               </div>
-              <Mono className="shrink-0">{new Date(a.ts).toLocaleString()}</Mono>
-            </div>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -536,7 +570,7 @@ function Announcements() {
 function DiscordCTA() {
   return (
     <section className="mx-auto max-w-7xl px-5 py-20">
-      <div className="grain relative flex flex-col items-center overflow-hidden border border-accent/30 bg-accent/5 px-6 py-16 text-center">
+      <Reveal sweep className="grain relative flex flex-col items-center overflow-hidden border border-accent/30 bg-accent/5 px-6 py-16 text-center">
         <div className="relative z-10">
           <Mono className="text-accent">COMMUNITY // DISCORD-FIRST OPERATIONS</Mono>
           <h2 className="mt-4 font-display text-4xl font-black tracking-tight uppercase sm:text-6xl">Join the Operation</h2>
@@ -544,11 +578,11 @@ function DiscordCTA() {
             Check-in reminders, match rooms, live results and admin alerts route through Discord as a
             first-class channel — not an afterthought.
           </p>
-          <button onClick={() => window.open(brand.discordUrl, "_blank")} className="mt-8 bg-accent px-8 py-3 font-mono text-xs font-bold tracking-[0.2em] text-accent-foreground transition-opacity hover:opacity-90">
+          <button onClick={() => window.open(brand.discordUrl, "_blank")} className="btn-sweep mt-8 bg-accent px-8 py-3 font-mono text-xs font-bold tracking-[0.2em] text-accent-foreground transition-opacity hover:opacity-90">
             CONNECT DISCORD
           </button>
         </div>
-      </div>
+      </Reveal>
     </section>
   );
 }
@@ -647,7 +681,7 @@ function AppShell() {
     <div className="min-h-full bg-background">
       <ClassifiedBar />
       <Nav onLogin={openLogin} onControl={openControl} route={route} />
-      <main>
+      <main key={route} className="animate-route">
         {route === "home" && <Home />}
         {route === "tournaments" && <TournamentsPage />}
         {route === "tournament" && <TournamentDetailPage />}

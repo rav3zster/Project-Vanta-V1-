@@ -7,11 +7,13 @@ import { navigate } from "./lib/router";
 import { StatusChip, SectionHeader, Mono, PlayerCard } from "./components/ui";
 import { Bracket } from "./components/Bracket";
 import { PlayerDossier } from "./components/PlayerDossier";
+import { Reveal, CountUp, HudCorners } from "./components/Reveal";
+import { useInView } from "./lib/motion";
 
 const primary =
-  "bg-accent px-6 py-3 font-mono text-xs font-bold tracking-[0.15em] text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-40";
+  "btn-sweep bg-accent px-6 py-3 font-mono text-xs font-bold tracking-[0.15em] text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-40";
 const ghost =
-  "border border-border-strong px-6 py-3 font-mono text-xs tracking-[0.15em] text-foreground transition-colors hover:bg-surface-hover";
+  "btn-sweep border border-border-strong px-6 py-3 font-mono text-xs tracking-[0.15em] text-foreground transition-colors hover:bg-surface-hover";
 
 function PageHead({ kicker, title, sub }: { kicker: string; title: string; sub?: string }) {
   return (
@@ -45,7 +47,8 @@ export function TournamentsPage() {
         <SectionHeader index="01" title="Featured" action={t ? <StatusChip status={t.status} /> : undefined} />
         {!t ? <Empty label="NO ACTIVE TOURNAMENT" /> : (
           <button onClick={() => navigate("tournament")}
-            className="group grid w-full gap-6 border border-border bg-surface p-6 text-left transition-colors hover:border-border-strong sm:grid-cols-[1fr_auto]">
+            className="group relative grid w-full gap-6 border border-border bg-surface p-6 text-left transition-colors hover:border-border-strong sm:grid-cols-[1fr_auto]">
+            <HudCorners />
             <div>
               <Mono className="text-accent">{t.season}</Mono>
               <h3 className="mt-2 font-display text-4xl font-black tracking-tight uppercase">{t.name}</h3>
@@ -63,20 +66,23 @@ export function TournamentsPage() {
           <SectionHeader index="02" title="Open For Registration" />
           {data.events.length === 0 ? <Empty label="NO OTHER EVENTS" /> : (
             <div className="grid gap-4 md:grid-cols-3">
-              {data.events.map((u) => (
-                <div key={u.id} className="flex flex-col border border-border bg-surface p-5 transition-colors hover:border-border-strong">
-                  <div className="flex items-center justify-between"><Mono>{u.id}</Mono><StatusChip status={u.status} /></div>
-                  <h3 className="mt-4 font-display text-2xl font-extrabold tracking-tight">{u.name}</h3>
-                  <div className="mt-1 text-sm text-muted">{u.game} · {u.format}</div>
-                  <div className="mt-6 grid grid-cols-2 gap-3 border-t border-border pt-4">
-                    <div><Mono>PRIZE</Mono><div className="font-display text-lg font-bold text-accent">{u.prize}</div></div>
-                    <div><Mono>SLOTS</Mono><div className="font-mono text-lg tabular-nums">{u.registered}/{u.slots}</div></div>
+              {data.events.map((u, i) => (
+                <Reveal key={u.id} delay={i * 60}>
+                  <div className="group relative flex flex-col border border-border bg-surface p-5 transition-colors hover:border-border-strong">
+                    <HudCorners />
+                    <div className="flex items-center justify-between"><Mono>{u.id}</Mono><StatusChip status={u.status} /></div>
+                    <h3 className="mt-4 font-display text-2xl font-extrabold tracking-tight">{u.name}</h3>
+                    <div className="mt-1 text-sm text-muted">{u.game} · {u.format}</div>
+                    <div className="mt-6 grid grid-cols-2 gap-3 border-t border-border pt-4">
+                      <div><Mono>PRIZE</Mono><div className="font-display text-lg font-bold text-accent">{u.prize}</div></div>
+                      <div><Mono>SLOTS</Mono><div className="font-mono text-lg tabular-nums">{u.registered}/{u.slots}</div></div>
+                    </div>
+                    <button onClick={() => navigate("register")} disabled={u.status !== "REGISTRATION_OPEN"}
+                      className={`${primary} mt-5 w-full`}>
+                      {u.status === "REGISTRATION_OPEN" ? "REGISTER TEAM" : "REGISTRATION CLOSED"}
+                    </button>
                   </div>
-                  <button onClick={() => navigate("register")} disabled={u.status !== "REGISTRATION_OPEN"}
-                    className={`${primary} mt-5 w-full`}>
-                    {u.status === "REGISTRATION_OPEN" ? "REGISTER TEAM" : "REGISTRATION CLOSED"}
-                  </button>
-                </div>
+                </Reveal>
               ))}
             </div>
           )}
@@ -123,8 +129,8 @@ export function TournamentDetailPage() {
       <div className="mb-8 flex gap-1 border-b border-border">
         {TABS.map((tb) => (
           <button key={tb} onClick={() => setTab(tb)}
-            className={`relative px-4 py-2.5 font-mono text-[11px] tracking-[0.15em] transition-colors ${tab === tb ? "text-foreground" : "text-muted hover:text-foreground"}`}>
-            {tb}{tab === tb && <span className="absolute inset-x-0 -bottom-px h-0.5 bg-accent" />}
+            className={`btn-sweep relative px-4 py-2.5 font-mono text-[11px] tracking-[0.15em] transition-colors ${tab === tb ? "text-foreground" : "text-muted hover:text-foreground"}`}>
+            {tb}{tab === tb && <span className="tab-underline absolute inset-x-0 -bottom-px h-0.5 bg-accent" />}
           </button>
         ))}
       </div>
@@ -151,8 +157,10 @@ function OverviewBlock({ t }: { t: any }) {
           advance automatically as results are finalized.
         </p>
         <div className="mt-8 grid grid-cols-2 gap-px border border-border bg-border sm:grid-cols-3">
-          {items.map(([k, v]) => (
-            <div key={k} className="bg-surface p-4"><Mono>{k}</Mono><div className="mt-1 font-display text-base font-bold">{v}</div></div>
+          {items.map(([k, v], i) => (
+            <Reveal key={k} delay={i * 50}>
+              <div className="bg-surface p-4"><Mono>{k}</Mono><div className="mt-1 font-display text-base font-bold">{v}</div></div>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -178,35 +186,37 @@ function MatchesTable({ t }: { t: any }) {
   const teams = t?.teams ?? [];
   const matches = t?.matches ?? [];
   return (
-    <div className="overflow-x-auto border border-border">
-      <table className="w-full min-w-[640px] text-left text-sm">
-        <thead>
-          <tr className="border-b border-border bg-surface">
-            {["MATCH", "ROUND", "TEAMS", "SCORE", "STATUS"].map((h) => (
-              <th key={h} className="px-4 py-3 font-mono text-[10px] tracking-[0.15em] text-muted">{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
-          {matches.length === 0 && (
-            <tr><td colSpan={5} className="px-4 py-8 text-center font-mono text-xs text-border-strong">NO MATCHES YET</td></tr>
-          )}
-          {matches.map((m: any) => {
-            const a = teams.find((x: any) => x.id === m.a);
-            const b = teams.find((x: any) => x.id === m.b);
-            return (
-              <tr key={m.id} className="transition-colors hover:bg-surface-hover">
-                <td className="px-4 py-3 font-mono text-xs text-muted">{m.id}</td>
-                <td className="px-4 py-3 font-mono text-[11px] tracking-[0.1em]">{m.round}</td>
-                <td className="px-4 py-3">{a && b ? `${a.tag} vs ${b.tag}` : <span className="text-border-strong">TBD</span>}</td>
-                <td className="px-4 py-3 font-mono tabular-nums">{m.scoreA === null || m.scoreA === undefined ? "–" : `${m.scoreA}:${m.scoreB}`}</td>
-                <td className="px-4 py-3"><StatusChip status={m.status} /></td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <Reveal>
+      <div className="overflow-x-auto border border-border">
+        <table className="w-full min-w-[640px] text-left text-sm">
+          <thead>
+            <tr className="border-b border-border bg-surface">
+              {["MATCH", "ROUND", "TEAMS", "SCORE", "STATUS"].map((h) => (
+                <th key={h} className="px-4 py-3 font-mono text-[10px] tracking-[0.15em] text-muted">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {matches.length === 0 && (
+              <tr><td colSpan={5} className="px-4 py-8 text-center font-mono text-xs text-border-strong">NO MATCHES YET</td></tr>
+            )}
+            {matches.map((m: any) => {
+              const a = teams.find((x: any) => x.id === m.a);
+              const b = teams.find((x: any) => x.id === m.b);
+              return (
+                <tr key={m.id} className="transition-colors hover:bg-surface-hover">
+                  <td className="px-4 py-3 font-mono text-xs text-muted">{m.id}</td>
+                  <td className="px-4 py-3 font-mono text-[11px] tracking-[0.1em]">{m.round}</td>
+                  <td className="px-4 py-3">{a && b ? `${a.tag} vs ${b.tag}` : <span className="text-border-strong">TBD</span>}</td>
+                  <td className="px-4 py-3 font-mono tabular-nums">{m.scoreA === null || m.scoreA === undefined ? "–" : `${m.scoreA}:${m.scoreB}`}</td>
+                  <td className="px-4 py-3"><StatusChip status={m.status} /></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </Reveal>
   );
 }
 
@@ -215,16 +225,19 @@ function TeamsGrid({ t }: { t: any }) {
   if (teams.length === 0) return <Empty label="NO TEAMS REGISTERED YET" />;
   return (
     <div className="grid gap-px border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
-      {teams.map((tm: any) => (
-        <div key={tm.id} className="bg-surface p-5 transition-colors hover:bg-surface-hover">
-          <div className="flex items-start justify-between">
-            <span className="font-mono text-xs text-accent">{tm.seed ? `#${tm.seed}` : "—"}</span>
-            <StatusChip status={tm.checkedIn ? "READY" : tm.approved ? "SCHEDULED" : "FORFEIT"} />
+      {teams.map((tm: any, i: number) => (
+        <Reveal key={tm.id} delay={i * 60}>
+          <div className="group relative bg-surface p-5 transition-colors hover:bg-surface-hover">
+            <HudCorners />
+            <div className="flex items-start justify-between">
+              <span className="font-mono text-xs text-accent">{tm.seed ? `#${tm.seed}` : "—"}</span>
+              <StatusChip status={tm.checkedIn ? "READY" : tm.approved ? "SCHEDULED" : "FORFEIT"} />
+            </div>
+            <div className="mt-4 font-display text-xl font-extrabold">{tm.tag}</div>
+            <div className="text-sm text-muted">{tm.name}</div>
+            <div className="mt-3"><Mono>{tm.region}</Mono></div>
           </div>
-          <div className="mt-4 font-display text-xl font-extrabold">{tm.tag}</div>
-          <div className="text-sm text-muted">{tm.name}</div>
-          <div className="mt-3"><Mono>{tm.region}</Mono></div>
-        </div>
+        </Reveal>
       ))}
     </div>
   );
@@ -290,6 +303,8 @@ export function RosterPage() {
     return isNaN(num) ? acc : acc + num;
   }, 0);
 
+  const [statsRef, statsInView] = useInView<HTMLDivElement>();
+
   const handleSelectGame = (g: string) => {
     setActiveGame(g);
     setSelectedPlayer(null);
@@ -309,18 +324,18 @@ export function RosterPage() {
       />
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-5 sm:py-12">
         {/* Organization Showcase Stats Bar */}
-        <div className="mb-8 grid gap-4 border border-border bg-surface p-5 sm:p-6 sm:grid-cols-3">
+        <div ref={statsRef} className="mb-8 grid gap-4 border border-border bg-surface p-5 sm:p-6 sm:grid-cols-3">
           <div>
             <Mono className="text-[10px]">TOTAL EARNINGS</Mono>
             <div className="mt-1 font-display text-3xl font-black text-accent">
-              ${totalWinnings.toLocaleString()}
+              $<CountUp value={totalWinnings} start={statsInView} />
             </div>
             <div className="text-xs text-muted">Across official championship circuits</div>
           </div>
           <div>
             <Mono className="text-[10px]">ACTIVE OPERATORS</Mono>
             <div className="mt-1 font-display text-3xl font-black text-foreground">
-              {roster.length}
+              <CountUp value={roster.length} start={statsInView} />
             </div>
             <div className="text-xs text-muted">Signed across {Math.max(1, games.length - 1)} competitive titles</div>
           </div>
@@ -343,7 +358,7 @@ export function RosterPage() {
                 <button
                   key={g}
                   onClick={() => handleSelectGame(g)}
-                  className={`border px-3 py-1.5 font-mono text-[11px] tracking-[0.15em] transition-colors ${
+                  className={`btn-sweep border px-3 py-1.5 font-mono text-[11px] tracking-[0.15em] transition-colors ${
                     activeGame === g
                       ? "border-accent bg-accent/10 font-bold text-accent"
                       : "border-border text-muted hover:border-border-strong hover:text-foreground"
@@ -358,7 +373,7 @@ export function RosterPage() {
             {activeGame !== "ALL" && selectedPlayer && (
               <button
                 onClick={() => setSelectedPlayer(null)}
-                className="flex items-center gap-1.5 border border-danger/40 px-3 py-1 font-mono text-[11px] tracking-[0.1em] text-danger hover:bg-danger/10 transition-colors"
+                className="btn-sweep flex items-center gap-1.5 border border-danger/40 px-3 py-1 font-mono text-[11px] tracking-[0.1em] text-danger hover:bg-danger/10 transition-colors"
               >
                 <span>✕ CLOSE DOSSIER</span>
               </button>
@@ -469,17 +484,19 @@ export function NewsPage() {
       <section className="mx-auto max-w-7xl px-5 py-16">
         {data.announcements.length === 0 ? <Empty label="NO ANNOUNCEMENTS" /> : (
           <div className="space-y-3">
-            {data.announcements.map((a) => (
-              <div key={a.id} className="flex flex-col gap-2 border border-border bg-surface p-5 transition-colors hover:border-border-strong sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-start gap-4">
-                  <StatusChip status={a.severity} />
-                  <div>
-                    <div className="font-display text-base font-bold">{a.title}</div>
-                    <div className="mt-0.5 text-sm text-muted">{a.body}</div>
+            {data.announcements.map((a, i) => (
+              <Reveal key={a.id} delay={i * 60}>
+                <div className="flex flex-col gap-2 border border-border bg-surface p-5 transition-colors hover:border-border-strong sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-4">
+                    <StatusChip status={a.severity} />
+                    <div>
+                      <div className="font-display text-base font-bold">{a.title}</div>
+                      <div className="mt-0.5 text-sm text-muted">{a.body}</div>
+                    </div>
                   </div>
+                  <Mono className="shrink-0">{new Date(a.ts).toLocaleString()}</Mono>
                 </div>
-                <Mono className="shrink-0">{new Date(a.ts).toLocaleString()}</Mono>
-              </div>
+              </Reveal>
             ))}
           </div>
         )}
@@ -612,7 +629,7 @@ export function DashboardPage({ onControl }: { onControl: () => void }) {
             {!editingName ? (
               <button
                 onClick={() => setEditingName(true)}
-                className="border border-accent px-4 py-2 font-mono text-[11px] font-bold tracking-[0.15em] text-accent transition-colors hover:bg-accent/10"
+                className="btn-sweep border border-accent px-4 py-2 font-mono text-[11px] font-bold tracking-[0.15em] text-accent transition-colors hover:bg-accent/10"
               >
                 CUSTOMIZE USERNAME ✎
               </button>
@@ -628,13 +645,13 @@ export function DashboardPage({ onControl }: { onControl: () => void }) {
                 <button
                   disabled={saving || !newName.trim()}
                   onClick={handleSaveName}
-                  className="bg-accent px-3 py-1.5 font-mono text-xs font-bold text-accent-foreground"
+                  className="btn-sweep bg-accent px-3 py-1.5 font-mono text-xs font-bold text-accent-foreground"
                 >
                   {saving ? "SAVING…" : "SAVE"}
                 </button>
                 <button
                   onClick={() => { setEditingName(false); setNewName(profile.username); }}
-                  className="border border-border px-3 py-1.5 font-mono text-xs text-muted"
+                  className="btn-sweep border border-border px-3 py-1.5 font-mono text-xs text-muted"
                 >
                   CANCEL
                 </button>
@@ -671,10 +688,12 @@ export function DashboardPage({ onControl }: { onControl: () => void }) {
           <div className="space-y-2">
             {notifs.length === 0 && <Mono>No recent notifications.</Mono>}
             {notifs.slice(0, 6).map((n, i) => (
-              <div key={i} className="flex items-center justify-between border border-border px-4 py-2.5">
-                <div className="flex items-center gap-3"><StatusChip status={n.severity ?? "INFO"} /><span className="text-sm">{n.title}</span></div>
-                <Mono>{new Date(n.ts).toLocaleTimeString()}</Mono>
-              </div>
+              <Reveal key={i} delay={i * 50}>
+                <div className="flex items-center justify-between border border-border px-4 py-2.5">
+                  <div className="flex items-center gap-3"><StatusChip status={n.severity ?? "INFO"} /><span className="text-sm">{n.title}</span></div>
+                  <Mono>{new Date(n.ts).toLocaleTimeString()}</Mono>
+                </div>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -694,16 +713,18 @@ export function NotificationsPage() {
         <div className="space-y-2">
           {notifs.length === 0 && <div className="border border-border bg-surface p-8 text-center"><Mono>No notifications.</Mono></div>}
           {notifs.map((n, i) => (
-            <div key={i} className="flex items-start justify-between gap-4 border border-border bg-surface p-4">
-              <div className="flex items-start gap-3">
-                <StatusChip status={n.severity ?? "INFO"} />
-                <div>
-                  <div className="font-display text-sm font-bold">{n.title}</div>
-                  <div className="text-sm text-muted">{n.body}</div>
+            <Reveal key={i} delay={i * 50}>
+              <div className="flex items-start justify-between gap-4 border border-border bg-surface p-4">
+                <div className="flex items-start gap-3">
+                  <StatusChip status={n.severity ?? "INFO"} />
+                  <div>
+                    <div className="font-display text-sm font-bold">{n.title}</div>
+                    <div className="text-sm text-muted">{n.body}</div>
+                  </div>
                 </div>
+                <Mono className="shrink-0">{new Date(n.ts).toLocaleString()}</Mono>
               </div>
-              <Mono className="shrink-0">{new Date(n.ts).toLocaleString()}</Mono>
-            </div>
+            </Reveal>
           ))}
         </div>
       </section>

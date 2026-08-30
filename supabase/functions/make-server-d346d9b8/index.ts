@@ -556,11 +556,36 @@ app.post(`${P}/announcements/delete`, async (c) => {
   try {
     const profile = await requireProfile(c);
     requirePerm(profile, "announcements.delete");
-    const { id, ts } = await c.req.json();
+    const { id, ts, title } = await c.req.json();
     const found = await findAnnouncementKey(id, ts);
-    if (!found) return c.json({ error: "Announcement not found" }, 404);
-    await kv.del(found.key);
-    await audit(profile, "announcement.deleted", found.item?.id || found.key, { title: found.item?.title });
+
+    // Direct deletion from PostgreSQL KV table for 100% clean wipe
+    if (found?.key) {
+      await kv.del(found.key);
+      await admin().from("kv_store_d346d9b8").delete().eq("key", found.key);
+    }
+    if (ts) {
+      await kv.del(`announcement:${ts}`);
+      await admin().from("kv_store_d346d9b8").delete().like("key", `%${ts}%`);
+    }
+    if (id) {
+      await kv.del(`announcement:${id}`);
+      await admin().from("kv_store_d346d9b8").delete().like("key", `%${id}%`);
+    }
+    if (title) {
+      // Find by title in value if passed
+      const { data } = await admin().from("kv_store_d346d9b8").select("key, value").like("key", "announcement:%");
+      if (data) {
+        for (const row of data) {
+          if (row.value?.title === title) {
+            await kv.del(row.key);
+            await admin().from("kv_store_d346d9b8").delete().eq("key", row.key);
+          }
+        }
+      }
+    }
+
+    await audit(profile, "announcement.deleted", found?.item?.id || id || ts || "announcement", { title: found?.item?.title || title });
     return c.json({ ok: true });
   } catch (e) {
     return errJson(c, e);
@@ -599,15 +624,37 @@ app.delete(`${P}/announcements/:ts`, async (c) => {
     requirePerm(profile, "announcements.delete");
     const ts = c.req.param("ts");
     const found = await findAnnouncementKey(undefined, ts);
-    if (!found) return c.json({ error: "Announcement not found" }, 404);
-    await kv.del(found.key);
-    await audit(profile, "announcement.deleted", found.item?.id || found.key, { title: found.item?.title });
+    if (found?.key) {
+      await kv.del(found.key);
+      await admin().from("kv_store_d346d9b8").delete().eq("key", found.key);
+    }
+    await kv.del(`announcement:${ts}`);
+    await admin().from("kv_store_d346d9b8").delete().like("key", `%${ts}%`);
+    await audit(profile, "announcement.deleted", found?.item?.id || ts, { title: found?.item?.title });
     return c.json({ ok: true });
   } catch (e) {
     return errJson(c, e);
   }
 });
 
+// ---------------------------------------------------------------------------
+// OPERATOR MUTATIONS (POST RPC to avoid CORS/PUT issues)
+// ---------------------------------------------------------------------------
+
+app.post(`${P}/operations/run`, async (c) => {
+  try {
+    const profile = await requireProfile(c);
+    const { action, ...body } = await c.req.json();
+    const t: Tournament = (await kv.get(TOURNAMENT_KEY)) ?? ({} as any);
+
+    const events = await runOp(profile, t, action, body);
+    await kv.set(TOURNAMENT_KEY, t);
+
+    return c.json({ ok: true, events, tournament: t });
+  } catch (e) {
+    return errJson(c, e);
+  }
+});
 
 // ---- Roster management (GOD & DEMI_GOD) -------------------------------------
 
@@ -747,22 +794,26 @@ async function runOp(
   switch (action) {
     case "create-tournament": {
       requirePerm(profile, "tournaments.manage");
-      const { name, game, season, format, slots, prizePool, region } = body;
+      const { name, game, season, format, formatType, slots, prizePool, region, startDate, registrationDeadline, checkInWindow } = body;
       if (!name) throw new HttpError(400, "Tournament name is required");
       t.name = String(name).trim();
       t.game = String(game || "VALORANT").trim();
       t.season = String(season || "SEASON 01").trim();
       t.format = String(format || "Single Elimination Knockout · BO1").trim();
+      t.formatType = formatType || "KNOCKOUT";
       t.slots = Number(slots) || 8;
       t.prizePool = String(prizePool || "$10,000").trim();
       t.region = String(region || "GLOBAL").trim();
+      t.startDate = startDate ? String(startDate).trim() : undefined;
+      t.registrationDeadline = registrationDeadline ? String(registrationDeadline).trim() : undefined;
+      t.checkInWindow = checkInWindow ? String(checkInWindow).trim() : undefined;
       t.status = "DRAFT";
       t.champion = null;
       t.teams = [];
       t.matches = [];
       t.updatedAt = new Date().toISOString();
-      await audit(profile, "tournament.created", t.id, { name: t.name, game: t.game, slots: t.slots });
-      await notify("tournament.created", "Tournament created", `${t.name} (${t.game}) configured`);
+      await audit(profile, "tournament.created", t.id, { name: t.name, game: t.game, slots: t.slots, format: t.format });
+      await notify("tournament.created", "Tournament created", `${t.name} (${t.game}) configured for ${t.slots} teams`);
       return ["tournament.created"];
     }
     case "edit-tournament": {
@@ -771,13 +822,32 @@ async function runOp(
       if (body.game) t.game = String(body.game).trim();
       if (body.season) t.season = String(body.season).trim();
       if (body.format) t.format = String(body.format).trim();
+      if (body.formatType) t.formatType = body.formatType;
       if (body.slots) t.slots = Number(body.slots);
       if (body.prizePool) t.prizePool = String(body.prizePool).trim();
       if (body.region) t.region = String(body.region).trim();
+      if (body.startDate !== undefined) t.startDate = String(body.startDate).trim();
+      if (body.registrationDeadline !== undefined) t.registrationDeadline = String(body.registrationDeadline).trim();
+      if (body.checkInWindow !== undefined) t.checkInWindow = String(body.checkInWindow).trim();
       if (body.status) t.status = body.status;
       t.updatedAt = new Date().toISOString();
       await audit(profile, "tournament.edited", t.id, { name: t.name, game: t.game });
       return ["tournament.edited"];
+    }
+    case "update-fixture": {
+      requirePerm(profile, "tournaments.manage");
+      const { matchId, teamAId, teamBId, time, format, roundName } = body;
+      const match = t.matches.find((m) => m.id === matchId);
+      if (!match) throw new HttpError(404, "Match fixture not found");
+      if (teamAId !== undefined) match.a = teamAId ? String(teamAId) : null;
+      if (teamBId !== undefined) match.b = teamBId ? String(teamBId) : null;
+      if (time !== undefined) match.time = String(time);
+      if (format !== undefined) match.format = format;
+      if (roundName !== undefined) match.round = String(roundName);
+      if (match.a && match.b && match.status === "SCHEDULED") match.status = "READY";
+      t.updatedAt = new Date().toISOString();
+      await audit(profile, "fixture.updated", match.id, { a: match.a, b: match.b, time: match.time });
+      return [`fixture.updated:${match.id}`];
     }
     case "add-team": {
       requirePerm(profile, "tournaments.manage");

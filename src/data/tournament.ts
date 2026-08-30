@@ -18,6 +18,13 @@ export type TournamentStatus =
   | "COMPLETED"
   | "CANCELLED";
 
+export type TournamentFormatType =
+  | "KNOCKOUT"       // Single Elimination Knockout
+  | "DOUBLE_ELIM"    // Double Elimination (Upper + Lower Brackets)
+  | "ROUND_ROBIN"    // League Table / Round Robin Groups
+  | "SWISS"          // Swiss System Rounds (3W / 3L)
+  | "GSL_GROUPS";    // GSL Dual-Tournament Groups into Playoffs
+
 export type MatchStatus =
   | "SCHEDULED"
   | "READY"
@@ -52,7 +59,8 @@ export type Team = {
 
 export type Match = {
   id: string;
-  round: "QUARTERFINAL" | "SEMIFINAL" | "FINAL";
+  round: string; // "ROUND OF 16" | "QUARTERFINAL" | "SEMIFINAL" | "FINAL" | "UPPER FINAL" | "LOWER R1" | "LOWER FINAL" | "GROUP A" | "SWISS R1" etc.
+  bracketType?: "UPPER" | "LOWER" | "GRAND_FINAL" | "GROUP" | "SWISS";
   slot: number;
   status: MatchStatus;
   a: string | null;
@@ -61,6 +69,32 @@ export type Match = {
   scoreB: number | null;
   winner: string | null;
   time?: string;
+  format?: "BO1" | "BO3" | "BO5";
   server: string;
   note?: string;
+  feeds?: [string, "a" | "b"] | null;
+};
+
+export type Tournament = {
+  id: string;
+  slug: string;
+  name: string;
+  season: string;
+  status: TournamentStatus;
+  game: string;
+  format: string;
+  formatType?: TournamentFormatType;
+  prizePool: string;
+  region: string;
+  platform: string;
+  slots: number;
+  teams: Team[];
+  matches: Match[];
+  champion: string | null;
+  createdAt: string;
+  updatedAt: string;
+  startDate?: string;
+  registrationDeadline?: string;
+  checkInWindow?: string;
+  prizeBreakdown?: [string, string][];
 };

@@ -1,24 +1,34 @@
-import { lazy, Suspense, useEffect, useState } from "react";
-import { brand } from "./config/brand";
-import { AuthProvider, useAuth } from "./lib/auth";
-import { SiteProvider, useSite } from "./lib/site";
-import { ThemeProvider } from "./lib/theme";
-import { AuthModal } from "./components/AuthModal";
-import { useRoute, navigate, type Route } from "./lib/router";
+import { lazy, Suspense, useEffect, useState } from "react"
+import { brand } from "./config/brand"
+import { AuthProvider, useAuth } from "./lib/auth"
+import { SiteProvider, useSite } from "./lib/site"
+import { ThemeProvider } from "./lib/theme"
+import { AuthModal } from "./components/AuthModal"
+import { useRoute, navigate, type Route } from "./lib/router"
 
 // Control is the admin operations panel (GOD/DEMI_GOD only) and pulls in the
 // roster editor, image cropper, match resolver, etc. Splitting it into its own
 // chunk keeps that weight out of the bundle every anonymous visitor downloads.
-const Control = lazy(() => import("./components/Control").then((m) => ({ default: m.Control })));
+const Control = lazy(() =>
+  import("./components/Control").then((m) => ({ default: m.Control })),
+)
 import {
-  TournamentsPage, TournamentDetailPage, MatchesPage, TeamsPage,
-  RosterPage, NewsPage, RegisterPage, DashboardPage, NotificationsPage, ProfilePage,
-} from "./pages";
-import { StatusChip, SectionHeader, Mono, PlayerCard } from "./components/ui";
-import { Bracket } from "./components/Bracket";
-import { ThemeSwitcher } from "./components/ThemeSwitcher";
-import { Reveal, CountUp, HudCorners } from "./components/Reveal";
-import { useInView } from "./lib/motion";
+  TournamentsPage,
+  TournamentDetailPage,
+  MatchesPage,
+  TeamsPage,
+  RosterPage,
+  NewsPage,
+  RegisterPage,
+  DashboardPage,
+  NotificationsPage,
+  ProfilePage,
+} from "./pages"
+import { StatusChip, SectionHeader, Mono, PlayerCard } from "./components/ui"
+import { Bracket } from "./components/Bracket"
+import { ThemeSwitcher } from "./components/ThemeSwitcher"
+import { Reveal, CountUp, HudCorners } from "./components/Reveal"
+import { useInView } from "./lib/motion"
 
 const NAV: { label: string; route: Route }[] = [
   { label: "TOURNAMENTS", route: "tournaments" },
@@ -26,21 +36,23 @@ const NAV: { label: string; route: Route }[] = [
   { label: "TEAMS", route: "teams" },
   { label: "ROSTER", route: "roster" },
   { label: "NEWS", route: "news" },
-];
+]
 
 function ClassifiedBar() {
-  const { data } = useSite();
-  const t = data.tournament;
+  const { data } = useSite()
+  const t = data.tournament
   const items = [
     `${brand.codename} // OPERATIONS TERMINAL`,
     t ? `${t.season} ACTIVE` : "AWAITING SEASON",
     t ? `${t.name} — ${t.status}` : "NO ACTIVE OPERATION",
     `${data.stats.liveMatches} MATCHES IN PROGRESS`,
-    `${data.stats.openDisputes} DISPUTE${data.stats.openDisputes === 1 ? "" : "S"} UNDER REVIEW`,
+    `${data.stats.openDisputes} DISPUTE${
+      data.stats.openDisputes === 1 ? "" : "S"
+    } UNDER REVIEW`,
     "GLOBAL SERVERS NOMINAL",
-  ];
+  ]
   // 2× duplication so the -50%→0 keyframe loops seamlessly (copy1 === copy2 visually)
-  const track = [...items, ...items];
+  const track = [...items, ...items]
 
   return (
     <div className="overflow-hidden border-b border-border bg-surface/90 backdrop-blur-sm select-none">
@@ -53,31 +65,64 @@ function ClassifiedBar() {
           willChange: "transform",
           animation: "marquee 18s linear infinite",
         }}
-        onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.animationPlayState = "paused"; }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.animationPlayState = "running"; }}
+        onMouseEnter={(e) => {
+          ;(e.currentTarget as HTMLDivElement).style.animationPlayState =
+            "paused"
+        }}
+        onMouseLeave={(e) => {
+          ;(e.currentTarget as HTMLDivElement).style.animationPlayState =
+            "running"
+        }}
       >
         {track.map((tx, i) => (
-          <span key={i} className="flex shrink-0 items-center gap-6 font-mono text-[10px] tracking-[0.2em] text-muted">
-            {tx}<span className="text-accent/60">◆</span>
+          <span
+            key={i}
+            className="flex shrink-0 items-center gap-6 font-mono text-[10px] tracking-[0.2em] text-muted"
+          >
+            {tx}
+            <span className="text-accent/60">◆</span>
           </span>
         ))}
       </div>
     </div>
-  );
+  )
 }
 
-
-function Nav({ onLogin, onControl, route }: { onLogin: () => void; onControl: () => void; route: Route }) {
-  const { profile, effectiveRole, availablePerspectives, setPerspective, loading, logout } = useAuth();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const admin = effectiveRole !== "HUMAN";
+function Nav({
+  onLogin,
+  onControl,
+  route,
+}: {
+  onLogin: () => void
+  onControl: () => void
+  route: Route
+}) {
+  const {
+    profile,
+    effectiveRole,
+    availablePerspectives,
+    setPerspective,
+    loading,
+    logout,
+  } = useAuth()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const admin = effectiveRole !== "HUMAN"
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-5 sm:py-4">
-        <button onClick={() => { navigate("home"); setMobileMenuOpen(false); }} className="flex items-baseline gap-2.5 sm:gap-3">
+        <button
+          onClick={() => {
+            navigate("home")
+            setMobileMenuOpen(false)
+          }}
+          className="flex items-baseline gap-2.5 sm:gap-3"
+        >
           <span className="font-display text-lg font-black tracking-tight sm:text-xl">
-            PROJECT V<span className="bg-accent text-accent-foreground px-1 ml-0.5 inline-block text-sm sm:text-base leading-none">1</span>
+            PROJECT V
+            <span className="bg-accent text-accent-foreground px-1 ml-0.5 inline-block text-sm sm:text-base leading-none">
+              1
+            </span>
           </span>
           <Mono className="hidden sm:inline">{brand.codename}</Mono>
         </button>
@@ -108,14 +153,20 @@ function Nav({ onLogin, onControl, route }: { onLogin: () => void; onControl: ()
               {/* Role Perspective Selector for GOD / DEMI_GOD */}
               {availablePerspectives.length > 1 && (
                 <div className="hidden items-center gap-1 border border-border bg-surface px-2 py-1 lg:flex">
-                  <span className="font-mono text-[9px] tracking-[0.1em] text-muted">PERSPECTIVE:</span>
+                  <span className="font-mono text-[9px] tracking-[0.1em] text-muted">
+                    PERSPECTIVE:
+                  </span>
                   <select
                     value={effectiveRole}
                     onChange={(e) => setPerspective(e.target.value as any)}
                     className="bg-transparent font-mono text-[10px] font-bold tracking-[0.1em] text-accent outline-none cursor-pointer"
                   >
                     {availablePerspectives.map((r) => (
-                      <option key={r} value={r} className="bg-surface text-foreground">
+                      <option
+                        key={r}
+                        value={r}
+                        className="bg-surface text-foreground"
+                      >
                         {r}
                       </option>
                     ))}
@@ -135,13 +186,25 @@ function Nav({ onLogin, onControl, route }: { onLogin: () => void; onControl: ()
                 className="hidden items-center gap-2 border border-border/80 bg-surface/50 px-3 py-1.5 text-left md:flex hover:border-border-strong"
               >
                 <div>
-                  <div className="font-mono text-xs font-bold text-foreground">{profile.username}</div>
+                  <div className="font-mono text-xs font-bold text-foreground">
+                    {profile.username}
+                  </div>
                   <div className="flex items-center gap-1 font-mono text-[9px] tracking-[0.15em]">
-                    <span className={effectiveRole === "GOD" ? "text-accent font-bold" : effectiveRole === "DEMI_GOD" ? "text-success font-bold" : "text-muted"}>
+                    <span
+                      className={
+                        effectiveRole === "GOD"
+                          ? "text-accent font-bold"
+                          : effectiveRole === "DEMI_GOD"
+                            ? "text-success font-bold"
+                            : "text-muted"
+                      }
+                    >
                       {effectiveRole}
                     </span>
                     {effectiveRole !== profile.role && (
-                      <span className="text-[8px] text-border-strong">({profile.role})</span>
+                      <span className="text-[8px] text-border-strong">
+                        ({profile.role})
+                      </span>
                     )}
                   </div>
                 </div>
@@ -154,7 +217,10 @@ function Nav({ onLogin, onControl, route }: { onLogin: () => void; onControl: ()
                 {admin ? "CONTROL" : "DASHBOARD"}
               </button>
               <button
-                onClick={() => { logout(); navigate("home"); }}
+                onClick={() => {
+                  logout()
+                  navigate("home")
+                }}
                 className="border border-border px-3 py-2 font-mono text-[11px] tracking-[0.15em] text-muted transition-colors hover:border-danger/50 hover:text-danger"
               >
                 LOG OUT
@@ -222,13 +288,23 @@ function Nav({ onLogin, onControl, route }: { onLogin: () => void; onControl: ()
             <div className="mb-4 border border-border bg-background/80 p-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="font-mono text-xs font-bold text-foreground">{profile.username}</div>
-                  <div className="text-[10px] font-mono text-muted">{profile.email}</div>
+                  <div className="font-mono text-xs font-bold text-foreground">
+                    {profile.username}
+                  </div>
+                  <div className="text-[10px] font-mono text-muted">
+                    {profile.email}
+                  </div>
                 </div>
                 <div className="text-right">
-                  <span className={`font-mono text-[10px] font-bold px-1.5 py-0.5 border ${
-                    effectiveRole === "GOD" ? "border-accent text-accent" : effectiveRole === "DEMI_GOD" ? "border-success text-success" : "border-border text-muted"
-                  }`}>
+                  <span
+                    className={`font-mono text-[10px] font-bold px-1.5 py-0.5 border ${
+                      effectiveRole === "GOD"
+                        ? "border-accent text-accent"
+                        : effectiveRole === "DEMI_GOD"
+                          ? "border-success text-success"
+                          : "border-border text-muted"
+                    }`}
+                  >
                     {effectiveRole}
                   </span>
                 </div>
@@ -236,7 +312,9 @@ function Nav({ onLogin, onControl, route }: { onLogin: () => void; onControl: ()
 
               {availablePerspectives.length > 1 && (
                 <div className="mt-3 flex items-center justify-between border-t border-border pt-2">
-                  <span className="font-mono text-[9px] tracking-[0.1em] text-muted">VIEW PERSPECTIVE:</span>
+                  <span className="font-mono text-[9px] tracking-[0.1em] text-muted">
+                    VIEW PERSPECTIVE:
+                  </span>
                   <select
                     value={effectiveRole}
                     onChange={(e) => setPerspective(e.target.value as any)}
@@ -255,13 +333,15 @@ function Nav({ onLogin, onControl, route }: { onLogin: () => void; onControl: ()
 
           {/* Navigation Links */}
           <div className="space-y-1">
-            <div className="mb-2 font-mono text-[9px] tracking-[0.2em] text-muted">NAVIGATION</div>
+            <div className="mb-2 font-mono text-[9px] tracking-[0.2em] text-muted">
+              NAVIGATION
+            </div>
             {NAV.map((n) => (
               <button
                 key={n.route}
                 onClick={() => {
-                  navigate(n.route);
-                  setMobileMenuOpen(false);
+                  navigate(n.route)
+                  setMobileMenuOpen(false)
                 }}
                 className={`flex w-full items-center justify-between border px-3.5 py-2.5 font-mono text-xs tracking-[0.15em] transition-colors ${
                   route === n.route
@@ -280,14 +360,20 @@ function Nav({ onLogin, onControl, route }: { onLogin: () => void; onControl: ()
             {!loading && profile ? (
               <>
                 <button
-                  onClick={() => { navigate("notifications"); setMobileMenuOpen(false); }}
+                  onClick={() => {
+                    navigate("notifications")
+                    setMobileMenuOpen(false)
+                  }}
                   className="flex w-full items-center justify-between border border-border px-3.5 py-2 font-mono text-xs tracking-[0.1em] text-muted hover:text-foreground"
                 >
                   <span>ALERTS &amp; NOTIFICATIONS</span>
                   <span className="text-[10px]">●</span>
                 </button>
                 <button
-                  onClick={() => { navigate("profile"); setMobileMenuOpen(false); }}
+                  onClick={() => {
+                    navigate("profile")
+                    setMobileMenuOpen(false)
+                  }}
                   className="flex w-full items-center justify-between border border-border px-3.5 py-2 font-mono text-xs tracking-[0.1em] text-muted hover:text-foreground"
                 >
                   <span>PROFILE SETTINGS</span>
@@ -295,9 +381,9 @@ function Nav({ onLogin, onControl, route }: { onLogin: () => void; onControl: ()
                 </button>
                 <button
                   onClick={() => {
-                    logout();
-                    navigate("home");
-                    setMobileMenuOpen(false);
+                    logout()
+                    navigate("home")
+                    setMobileMenuOpen(false)
                   }}
                   className="w-full border border-danger/40 py-2.5 text-center font-mono text-xs font-bold tracking-[0.15em] text-danger hover:bg-danger/10"
                 >
@@ -307,13 +393,19 @@ function Nav({ onLogin, onControl, route }: { onLogin: () => void; onControl: ()
             ) : (
               <div className="grid grid-cols-2 gap-2">
                 <button
-                  onClick={() => { onLogin(); setMobileMenuOpen(false); }}
+                  onClick={() => {
+                    onLogin()
+                    setMobileMenuOpen(false)
+                  }}
                   className="border border-border py-2.5 text-center font-mono text-xs font-bold tracking-[0.15em] text-foreground hover:bg-surface-hover"
                 >
                   LOG IN
                 </button>
                 <button
-                  onClick={() => { onLogin(); setMobileMenuOpen(false); }}
+                  onClick={() => {
+                    onLogin()
+                    setMobileMenuOpen(false)
+                  }}
                   className="bg-accent py-2.5 text-center font-mono text-xs font-bold tracking-[0.15em] text-accent-foreground"
                 >
                   REGISTER
@@ -324,14 +416,14 @@ function Nav({ onLogin, onControl, route }: { onLogin: () => void; onControl: ()
         </div>
       )}
     </header>
-  );
+  )
 }
 
 function Hero() {
-  const { data } = useSite();
-  const t = data.tournament;
-  const s = data.stats;
-  const [statsRef, statsInView] = useInView<HTMLDivElement>();
+  const { data } = useSite()
+  const t = data.tournament
+  const s = data.stats
+  const [statsRef, statsInView] = useInView<HTMLDivElement>()
 
   return (
     <section className="grain relative overflow-hidden border-b border-border">
@@ -339,37 +431,60 @@ function Hero() {
         <div>
           <Reveal className="mb-4 sm:mb-6 flex items-center gap-2.5 sm:gap-3">
             <span className="status-pulse inline-block size-2 rounded-full bg-accent" />
-            <Mono className="text-accent text-[10px] sm:text-xs">{t ? `LIVE OPERATION // ${t.name}` : "OPERATIONS TERMINAL"}</Mono>
+            <Mono className="text-accent text-[10px] sm:text-xs">
+              {t ? `LIVE OPERATION // ${t.name}` : "OPERATIONS TERMINAL"}
+            </Mono>
           </Reveal>
           <Reveal delay={80}>
             <h1 className="font-display text-[15vw] leading-[0.82] font-black tracking-tighter uppercase sm:text-8xl lg:text-9xl">
-              PROJECT<br /><span className="text-accent">V</span><span className="bg-accent text-accent-foreground px-1.5 sm:px-2.5 ml-1 inline-block">1</span>
+              PROJECT
+              <br />
+              <span className="text-accent">V</span>
+              <span className="bg-accent text-accent-foreground px-1.5 sm:px-2.5 ml-1 inline-block">
+                1
+              </span>
             </h1>
           </Reveal>
           <div className="mt-6 sm:mt-8 flex flex-wrap gap-x-3 sm:gap-x-4 gap-y-1">
             {brand.tagline.map((tg, i) => (
               <Reveal key={tg} delay={160 + i * 60} className="inline-block">
-                <span className="font-display text-base font-bold tracking-wide sm:text-2xl">{tg}</span>
+                <span className="font-display text-base font-bold tracking-wide sm:text-2xl">
+                  {tg}
+                </span>
               </Reveal>
             ))}
           </div>
           <Reveal delay={280}>
             <p className="mt-4 sm:mt-6 max-w-md text-xs sm:text-sm leading-relaxed text-muted">
-              An esports operating platform. Registration, check-in, seeding, brackets and live match
-              operations — run a real tournament without spreadsheets.
+              An esports operating platform. Registration, check-in, seeding,
+              brackets and live match operations — run a real tournament without
+              spreadsheets.
             </p>
           </Reveal>
-          <Reveal delay={340} className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3">
-            <button onClick={() => navigate("tournaments")} className="btn-sweep bg-accent px-6 py-3 font-mono text-xs font-bold tracking-[0.15em] text-accent-foreground transition-opacity hover:opacity-90 text-center">
+          <Reveal
+            delay={340}
+            className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3"
+          >
+            <button
+              onClick={() => navigate("tournaments")}
+              className="btn-sweep bg-accent px-6 py-3 font-mono text-xs font-bold tracking-[0.15em] text-accent-foreground transition-opacity hover:opacity-90 text-center"
+            >
               VIEW TOURNAMENTS
             </button>
-            <button onClick={() => navigate("register")} className="btn-sweep border border-border-strong px-6 py-3 font-mono text-xs tracking-[0.15em] text-foreground transition-colors hover:bg-surface-hover text-center">
+            <button
+              onClick={() => navigate("register")}
+              className="btn-sweep border border-border-strong px-6 py-3 font-mono text-xs tracking-[0.15em] text-foreground transition-colors hover:bg-surface-hover text-center"
+            >
               REGISTER TEAM
             </button>
           </Reveal>
         </div>
 
-        <Reveal delay={120} sweep className="flex flex-col justify-between border border-border bg-surface/60 p-4 sm:p-5">
+        <Reveal
+          delay={120}
+          sweep
+          className="flex flex-col justify-between border border-border bg-surface/60 p-4 sm:p-5"
+        >
           <div ref={statsRef} className="contents">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <Mono className="text-[10px] sm:text-xs">SYSTEM STATUS</Mono>
@@ -383,8 +498,13 @@ function Hero() {
                 ["ACTIVE PLAYERS", s.activePlayers],
                 ["OPEN DISPUTES", s.openDisputes],
               ].map(([k, v]) => (
-                <div key={k as string} className="flex items-center justify-between">
-                  <dt className="font-mono text-[10px] sm:text-[11px] tracking-[0.1em] text-muted">{k}</dt>
+                <div
+                  key={k as string}
+                  className="flex items-center justify-between"
+                >
+                  <dt className="font-mono text-[10px] sm:text-[11px] tracking-[0.1em] text-muted">
+                    {k}
+                  </dt>
                   <dd className="font-display text-xl sm:text-2xl font-extrabold tabular-nums">
                     <CountUp value={v as number} start={statsInView} />
                   </dd>
@@ -399,104 +519,185 @@ function Hero() {
         </Reveal>
       </div>
     </section>
-  );
+  )
 }
 
 function LiveNow() {
-  const { data } = useSite();
-  const t = data.tournament;
-  const teams = t?.teams ?? [];
-  const live = (t?.matches ?? []).filter((m: any) => m.status === "LIVE" || m.status === "DISPUTED");
-  if (live.length === 0) return null;
+  const { data } = useSite()
+  const t = data.tournament
+  const teams = t?.teams ?? []
+  const live = (t?.matches ?? []).filter(
+    (m: any) => m.status === "LIVE" || m.status === "DISPUTED",
+  )
+  if (live.length === 0) return null
   return (
     <section className="mx-auto max-w-7xl px-5 py-16">
-      <SectionHeader index="01" title="Live Now" action={<StatusChip status="LIVE" />} />
+      <SectionHeader
+        index="01"
+        title="Live Now"
+        action={<StatusChip status="LIVE" />}
+      />
       <div className="grid gap-4 md:grid-cols-2">
         {live.map((m: any, i: number) => {
-          const a = teams.find((tm: any) => tm.id === m.a);
-          const b = teams.find((tm: any) => tm.id === m.b);
+          const a = teams.find((tm: any) => tm.id === m.a)
+          const b = teams.find((tm: any) => tm.id === m.b)
           return (
             <Reveal key={m.id} delay={i * 70}>
               <div className="group relative flex items-center justify-between border border-border bg-surface p-5 transition-colors hover:border-border-strong">
                 <HudCorners />
                 <div className="flex items-center gap-5">
-                  <div className="text-right"><div className="font-display text-lg font-bold">{a?.tag}</div><Mono>{a?.name}</Mono></div>
-                  <div className="font-mono text-2xl font-bold tabular-nums text-foreground">
-                    {m.scoreA}<span className="mx-1.5 text-border-strong">:</span>{m.scoreB}
+                  <div className="text-right">
+                    <div className="font-display text-lg font-bold">
+                      {a?.tag}
+                    </div>
+                    <Mono>{a?.name}</Mono>
                   </div>
-                  <div><div className="font-display text-lg font-bold">{b?.tag}</div><Mono>{b?.name}</Mono></div>
+                  <div className="font-mono text-2xl font-bold tabular-nums text-foreground">
+                    {m.scoreA}
+                    <span className="mx-1.5 text-border-strong">:</span>
+                    {m.scoreB}
+                  </div>
+                  <div>
+                    <div className="font-display text-lg font-bold">
+                      {b?.tag}
+                    </div>
+                    <Mono>{b?.name}</Mono>
+                  </div>
                 </div>
                 <div className="text-right">
                   <StatusChip status={m.status} />
-                  <div className="mt-2"><Mono>{m.id} · {m.server}</Mono></div>
+                  <div className="mt-2">
+                    <Mono>
+                      {m.id} · {m.server}
+                    </Mono>
+                  </div>
                 </div>
               </div>
             </Reveal>
-          );
+          )
         })}
       </div>
     </section>
-  );
+  )
 }
 
 function FeaturedTournament() {
-  const { data } = useSite();
-  const t = data.tournament;
-  if (!t) return null;
+  const { data } = useSite()
+  const t = data.tournament
+  if (!t) return null
   return (
     <section className="border-y border-border bg-surface/30">
       <div className="mx-auto max-w-7xl px-5 py-16">
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6">
           <div>
             <div className="flex items-center gap-3">
-              <Mono className="text-accent">{brand.publicName} · {t.season}</Mono>
+              <Mono className="text-accent">
+                {brand.publicName} · {t.season}
+              </Mono>
               <StatusChip status={t.status} />
               <Mono className="text-success">● LIVE DATA</Mono>
             </div>
-            <h2 className="mt-2 font-display text-4xl font-black tracking-tight uppercase sm:text-6xl">{t.name}</h2>
+            <h2 className="mt-2 font-display text-4xl font-black tracking-tight uppercase sm:text-6xl">
+              {t.name}
+            </h2>
           </div>
           <div className="flex gap-6">
-            {[["TEAMS", `${t.teams.length}/${t.slots}`], ["PRIZE", t.prizePool], ["FORMAT", "BO1"]].map(([k, v]) => (
-              <div key={k}><Mono>{k}</Mono><div className="font-display text-xl font-extrabold tabular-nums">{v}</div></div>
+            {[
+              ["TEAMS", `${t.teams.length}/${t.slots}`],
+              ["PRIZE", t.prizePool],
+              ["FORMAT", "BO1"],
+            ].map(([k, v]) => (
+              <div key={k}>
+                <Mono>{k}</Mono>
+                <div className="font-display text-xl font-extrabold tabular-nums">
+                  {v}
+                </div>
+              </div>
             ))}
           </div>
         </div>
         <Reveal sweep>
-          <Bracket teams={t.teams} matches={t.matches} />
+          <Bracket
+            teams={t.teams}
+            matches={t.matches}
+            formatType={t.formatType}
+            tournamentName={t.name}
+            game={t.game}
+          />
         </Reveal>
         <div className="mt-6 flex justify-end">
-          <button onClick={() => navigate("tournament")} className="font-mono text-[11px] tracking-[0.15em] text-muted transition-colors hover:text-accent">FULL TOURNAMENT VIEW →</button>
+          <button
+            onClick={() => navigate("tournament")}
+            className="font-mono text-[11px] tracking-[0.15em] text-muted transition-colors hover:text-accent"
+          >
+            FULL TOURNAMENT VIEW →
+          </button>
         </div>
       </div>
     </section>
-  );
+  )
 }
 
 function Upcoming() {
-  const { data } = useSite();
-  if (data.events.length === 0) return null;
+  const { data } = useSite()
+  if (data.events.length === 0) return null
   return (
     <section className="mx-auto max-w-7xl px-5 py-16">
-      <SectionHeader index="02" title="Upcoming"
-        action={<button onClick={() => navigate("tournaments")} className="font-mono text-[11px] tracking-[0.15em] text-muted hover:text-accent">ALL EVENTS →</button>} />
+      <SectionHeader
+        index="02"
+        title="Upcoming"
+        action={
+          <button
+            onClick={() => navigate("tournaments")}
+            className="font-mono text-[11px] tracking-[0.15em] text-muted hover:text-accent"
+          >
+            ALL EVENTS →
+          </button>
+        }
+      />
       <div className="grid gap-4 md:grid-cols-3">
         {data.events.map((u, i) => (
           <Reveal key={u.id} delay={i * 70}>
             <div className="group relative flex flex-col border border-border bg-surface p-5 transition-colors hover:border-border-strong">
               <HudCorners />
-              <div className="flex items-center justify-between"><Mono>{u.id}</Mono><StatusChip status={u.status} /></div>
-              <h3 className="mt-4 font-display text-2xl font-extrabold tracking-tight">{u.name}</h3>
-              <div className="mt-1 text-sm text-muted">{u.game} · {u.format}</div>
+              <div className="flex items-center justify-between">
+                <Mono>{u.id}</Mono>
+                <StatusChip status={u.status} />
+              </div>
+              <h3 className="mt-4 font-display text-2xl font-extrabold tracking-tight">
+                {u.name}
+              </h3>
+              <div className="mt-1 text-sm text-muted">
+                {u.game} · {u.format}
+              </div>
               <div className="mt-6 grid grid-cols-2 gap-3 border-t border-border pt-4">
-                <div><Mono>PRIZE</Mono><div className="font-display text-lg font-bold text-accent">{u.prize}</div></div>
-                <div><Mono>SLOTS</Mono><div className="font-mono text-lg tabular-nums">{u.registered}/{u.slots}</div></div>
-                <div><Mono>REGION</Mono><div className="font-mono text-sm">{u.region}</div></div>
-                <div><Mono>CLOSES</Mono><div className="font-mono text-sm">{u.closes}</div></div>
+                <div>
+                  <Mono>PRIZE</Mono>
+                  <div className="font-display text-lg font-bold text-accent">
+                    {u.prize}
+                  </div>
+                </div>
+                <div>
+                  <Mono>SLOTS</Mono>
+                  <div className="font-mono text-lg tabular-nums">
+                    {u.registered}/{u.slots}
+                  </div>
+                </div>
+                <div>
+                  <Mono>REGION</Mono>
+                  <div className="font-mono text-sm">{u.region}</div>
+                </div>
+                <div>
+                  <Mono>CLOSES</Mono>
+                  <div className="font-mono text-sm">{u.closes}</div>
+                </div>
               </div>
               <div className="mt-4 h-px bg-border overflow-hidden">
                 <div
                   className="h-px bg-accent transition-[width] duration-700 ease-out"
-                  style={{ width: `${Math.min(100, (u.registered / u.slots) * 100)}%` }}
+                  style={{
+                    width: `${Math.min(100, (u.registered / u.slots) * 100)}%`,
+                  }}
                 />
               </div>
             </div>
@@ -504,12 +705,12 @@ function Upcoming() {
         ))}
       </div>
     </section>
-  );
+  )
 }
 
 function Results() {
-  const { data } = useSite();
-  if (data.results.length === 0) return null;
+  const { data } = useSite()
+  if (data.results.length === 0) return null
   return (
     <section className="border-y border-border bg-surface/30">
       <div className="mx-auto max-w-7xl px-5 py-16">
@@ -520,23 +721,35 @@ function Results() {
               <div className="grid grid-cols-2 items-center gap-4 px-5 py-4 transition-colors hover:bg-surface-hover sm:grid-cols-[120px_1fr_auto_100px]">
                 <Mono>{r.id}</Mono>
                 <div>
-                  <div className="font-display text-lg font-bold">{r.event}</div>
-                  <div className="text-sm text-muted"><span className="text-accent">{r.winner}</span> def. {r.runnerUp}</div>
+                  <div className="font-display text-lg font-bold">
+                    {r.event}
+                  </div>
+                  <div className="text-sm text-muted">
+                    <span className="text-accent">{r.winner}</span> def.{" "}
+                    {r.runnerUp}
+                  </div>
                 </div>
                 <div className="font-mono text-lg tabular-nums">{r.score}</div>
-                <div className="text-right"><Mono>{new Date(r.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</Mono></div>
+                <div className="text-right">
+                  <Mono>
+                    {new Date(r.date).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </Mono>
+                </div>
               </div>
             </Reveal>
           ))}
         </div>
       </div>
     </section>
-  );
+  )
 }
 
 function Roster() {
-  const { data } = useSite();
-  if (data.roster.length === 0) return null;
+  const { data } = useSite()
+  if (data.roster.length === 0) return null
   return (
     <section className="mx-auto max-w-7xl px-5 py-16">
       <SectionHeader index="04" title="Our Roster" />
@@ -548,12 +761,12 @@ function Roster() {
         ))}
       </div>
     </section>
-  );
+  )
 }
 
 function Announcements() {
-  const { data } = useSite();
-  if (data.announcements.length === 0) return null;
+  const { data } = useSite()
+  if (data.announcements.length === 0) return null
   return (
     <section className="border-y border-border bg-surface/30">
       <div className="mx-auto max-w-7xl px-5 py-16">
@@ -565,69 +778,98 @@ function Announcements() {
                 <div className="flex items-start gap-4">
                   <StatusChip status={a.severity} />
                   <div>
-                    <div className="font-display text-base font-bold">{a.title}</div>
+                    <div className="font-display text-base font-bold">
+                      {a.title}
+                    </div>
                     <div className="mt-0.5 text-sm text-muted">{a.body}</div>
                   </div>
                 </div>
-                <Mono className="shrink-0">{new Date(a.ts).toLocaleString()}</Mono>
+                <Mono className="shrink-0">
+                  {new Date(a.ts).toLocaleString()}
+                </Mono>
               </div>
             </Reveal>
           ))}
         </div>
       </div>
     </section>
-  );
+  )
 }
 
 function DiscordCTA() {
   return (
     <section className="mx-auto max-w-7xl px-5 py-20">
-      <Reveal sweep className="grain relative flex flex-col items-center overflow-hidden border border-accent/30 bg-accent/5 px-6 py-16 text-center">
+      <Reveal
+        sweep
+        className="grain relative flex flex-col items-center overflow-hidden border border-accent/30 bg-accent/5 px-6 py-16 text-center"
+      >
         <div className="relative z-10">
-          <Mono className="text-accent">COMMUNITY // DISCORD-FIRST OPERATIONS</Mono>
-          <h2 className="mt-4 font-display text-4xl font-black tracking-tight uppercase sm:text-6xl">Join the Operation</h2>
+          <Mono className="text-accent">
+            COMMUNITY // DISCORD-FIRST OPERATIONS
+          </Mono>
+          <h2 className="mt-4 font-display text-4xl font-black tracking-tight uppercase sm:text-6xl">
+            Join the Operation
+          </h2>
           <p className="mx-auto mt-4 max-w-lg text-sm text-muted">
-            Check-in reminders, match rooms, live results and admin alerts route through Discord as a
-            first-class channel — not an afterthought.
+            Check-in reminders, match rooms, live results and admin alerts route
+            through Discord as a first-class channel — not an afterthought.
           </p>
-          <button onClick={() => window.open(brand.discordUrl, "_blank")} className="btn-sweep mt-8 bg-accent px-8 py-3 font-mono text-xs font-bold tracking-[0.2em] text-accent-foreground transition-opacity hover:opacity-90">
+          <button
+            onClick={() => window.open(brand.discordUrl, "_blank")}
+            className="btn-sweep mt-8 bg-accent px-8 py-3 font-mono text-xs font-bold tracking-[0.2em] text-accent-foreground transition-opacity hover:opacity-90"
+          >
             CONNECT DISCORD
           </button>
         </div>
       </Reveal>
     </section>
-  );
+  )
 }
 
 function Footer({ onLogin }: { onLogin: () => void }) {
   const cols: { title: string; links: { label: string; go: () => void }[] }[] = [
-    { title: "PLATFORM", links: [
-      { label: "Tournaments", go: () => navigate("tournaments") },
-      { label: "Matches", go: () => navigate("matches") },
-      { label: "Bracket", go: () => navigate("tournament") },
-      { label: "Teams", go: () => navigate("teams") },
-    ] },
-    { title: "ORG", links: [
-      { label: "Roster", go: () => navigate("roster") },
-      { label: "News", go: () => navigate("news") },
-      { label: "Register", go: () => navigate("register") },
-      { label: "Dashboard", go: () => navigate("dashboard") },
-    ] },
-    { title: "ACCESS", links: [
-      { label: "Log In", go: onLogin },
-      { label: "Notifications", go: () => navigate("notifications") },
-      { label: "Profile", go: () => navigate("profile") },
-      { label: "Discord", go: () => window.open(brand.discordUrl, "_blank") },
-    ] },
-  ];
+    {
+      title: "PLATFORM",
+      links: [
+        { label: "Tournaments", go: () => navigate("tournaments") },
+        { label: "Matches", go: () => navigate("matches") },
+        { label: "Bracket", go: () => navigate("tournament") },
+        { label: "Teams", go: () => navigate("teams") },
+      ],
+    },
+    {
+      title: "ORG",
+      links: [
+        { label: "Roster", go: () => navigate("roster") },
+        { label: "News", go: () => navigate("news") },
+        { label: "Register", go: () => navigate("register") },
+        { label: "Dashboard", go: () => navigate("dashboard") },
+      ],
+    },
+    {
+      title: "ACCESS",
+      links: [
+        { label: "Log In", go: onLogin },
+        { label: "Notifications", go: () => navigate("notifications") },
+        { label: "Profile", go: () => navigate("profile") },
+        { label: "Discord", go: () => window.open(brand.discordUrl, "_blank") },
+      ],
+    },
+  ]
   return (
     <footer className="border-t border-border bg-surface">
       <div className="mx-auto max-w-7xl px-5 py-12">
         <div className="flex flex-col justify-between gap-8 sm:flex-row">
           <div>
-            <div className="font-display text-2xl font-black">{brand.publicName}</div>
-            <Mono className="mt-1 block">{brand.organizationName} · {brand.codename}</Mono>
-            <p className="mt-4 max-w-xs text-sm text-muted">{brand.metaDescription}</p>
+            <div className="font-display text-2xl font-black">
+              {brand.publicName}
+            </div>
+            <Mono className="mt-1 block">
+              {brand.organizationName} · {brand.codename}
+            </Mono>
+            <p className="mt-4 max-w-xs text-sm text-muted">
+              {brand.metaDescription}
+            </p>
           </div>
           <div className="grid grid-cols-2 gap-x-12 gap-y-2 sm:grid-cols-3">
             {cols.map((col) => (
@@ -636,7 +878,12 @@ function Footer({ onLogin }: { onLogin: () => void }) {
                 <ul className="mt-3 space-y-2">
                   {col.links.map((l) => (
                     <li key={l.label}>
-                      <button onClick={l.go} className="text-sm text-muted transition-colors hover:text-foreground">{l.label}</button>
+                      <button
+                        onClick={l.go}
+                        className="text-sm text-muted transition-colors hover:text-foreground"
+                      >
+                        {l.label}
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -645,12 +892,14 @@ function Footer({ onLogin }: { onLogin: () => void }) {
           </div>
         </div>
         <div className="mt-12 flex flex-col justify-between gap-2 border-t border-border pt-6 sm:flex-row">
-          <Mono>© 2026 {brand.organizationName}. WORKING IDENTITY — NAME NOT FINAL.</Mono>
+          <Mono>
+            © 2026 {brand.organizationName}. WORKING IDENTITY — NAME NOT FINAL.
+          </Mono>
           <Mono>ALL SYSTEMS NOMINAL</Mono>
         </div>
       </div>
     </footer>
-  );
+  )
 }
 
 function Home() {
@@ -665,7 +914,7 @@ function Home() {
       <Announcements />
       <DiscordCTA />
     </>
-  );
+  )
 }
 
 function ControlLoading() {
@@ -673,21 +922,23 @@ function ControlLoading() {
     <div className="fixed inset-0 z-[90] flex items-center justify-center bg-background">
       <Mono className="animate-pulse text-sm">LOADING CONTROL…</Mono>
     </div>
-  );
+  )
 }
 
 function AppShell() {
-  const { profile } = useAuth();
-  const { refresh } = useSite();
-  const route = useRoute();
-  const [showAuth, setShowAuth] = useState(false);
-  const [showControl, setShowControl] = useState(false);
+  const { profile } = useAuth()
+  const { refresh } = useSite()
+  const route = useRoute()
+  const [showAuth, setShowAuth] = useState(false)
+  const [showControl, setShowControl] = useState(false)
 
   // Refresh live site data when returning from Control (admin may have mutated state).
-  useEffect(() => { if (!showControl) refresh(); }, [showControl, refresh]);
+  useEffect(() => {
+    if (!showControl) refresh()
+  }, [showControl, refresh])
 
-  const openLogin = () => setShowAuth(true);
-  const openControl = () => setShowControl(true);
+  const openLogin = () => setShowAuth(true)
+  const openControl = () => setShowControl(true)
 
   return (
     <div className="min-h-full bg-background">
@@ -715,7 +966,7 @@ function AppShell() {
         </Suspense>
       )}
     </div>
-  );
+  )
 }
 
 // Providers live here (not only in main.tsx) so the app is self-contained no
@@ -729,5 +980,5 @@ export default function App() {
         </SiteProvider>
       </AuthProvider>
     </ThemeProvider>
-  );
+  )
 }

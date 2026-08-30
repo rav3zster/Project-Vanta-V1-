@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { useAuth } from "../lib/auth"
 import { useSite } from "../lib/site"
 import { api, supabase, type Player } from "../lib/supabase"
+import { type Match, type Team } from "../data/tournament"
 import { StatusChip, Mono } from "./ui"
 import { Bracket } from "./Bracket"
 import { getGameConfig, GAME_LIST } from "../config/games"
@@ -26,7 +27,7 @@ const btn =
 const primary =
   "bg-accent px-4 py-2.5 font-mono text-[11px] font-bold tracking-[0.12em] text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
 
-type Tab = "OPERATIONS" | "REGISTRATIONS" | "ROSTER" | "USERS" | "ANNOUNCEMENTS" | "AUDIT"
+type Tab = "OPERATIONS" | "FIXTURES" | "TEAMS" | "REGISTRATIONS" | "ROSTER" | "USERS" | "ANNOUNCEMENTS" | "AUDIT"
 
 export function Control({ onClose }: { onClose: () => void }) {
   const {
@@ -164,6 +165,8 @@ export function Control({ onClose }: { onClose: () => void }) {
 
   const TABS: { id: Tab; show: boolean }[] = [
     { id: "OPERATIONS", show: true },
+    { id: "FIXTURES", show: can("tournaments.manage") },
+    { id: "TEAMS", show: can("tournaments.manage") },
     {
       id: "REGISTRATIONS",
       show: can("registrations.approve") || can("tournaments.manage"),
@@ -593,13 +596,29 @@ export function Control({ onClose }: { onClose: () => void }) {
                       <Mono className="mb-3 block">
                         LIVE BRACKET — PROJECTION OF STATE
                       </Mono>
-                      <Bracket teams={teams as any} matches={matches as any} />
+                      <Bracket
+                        teams={teams as any}
+                        matches={matches as any}
+                        formatType={t?.formatType}
+                        tournamentName={t?.name}
+                        game={t?.game}
+                      />
                     </div>
                   )}
                 </>
               )}
 
-              {tab === "REGISTRATIONS" && (
+              {tab === "FIXTURES" && (
+                <FixturesAdmin
+                  matches={matches}
+                  teams={teams}
+                  busy={busy}
+                  can={can}
+                  op={op}
+                />
+              )}
+
+              {(tab === "REGISTRATIONS" || tab === "TEAMS") && (
                 <div className="space-y-6">
                   <div className="border border-border bg-surface p-5">
                     <div className="flex flex-col justify-between gap-3 border-b border-border pb-4 sm:flex-row sm:items-center">
@@ -1039,14 +1058,20 @@ export function Control({ onClose }: { onClose: () => void }) {
                   onDelete={(a) =>
                     run(
                       "Delete announcement",
-                      () => api.deleteAnnouncement({ id: a.id, ts: a.ts }),
+                      () =>
+                        api.deleteAnnouncement({
+                          id: a.id,
+                          ts: a.ts,
+                          title: a.title,
+                        }),
                       () => {
                         setAnnouncements((prev) =>
                           prev.filter(
                             (item) =>
                               item !== a &&
                               item.id !== a.id &&
-                              item.ts !== a.ts,
+                              item.ts !== a.ts &&
+                              item.title !== a.title,
                           ),
                         )
                         refreshSite()
@@ -2051,13 +2076,43 @@ function MatchResolver({
 const GAME_OPTIONS = [
   "VALORANT",
   "CS2",
-  "DOTA 2",
   "LEAGUE OF LEGENDS",
+  "DOTA 2",
   "APEX LEGENDS",
   "OVERWATCH 2",
   "RAINBOW SIX SIEGE",
   "ROCKET LEAGUE",
-  "OTHER",
+  "CALL OF DUTY",
+  "FORTNITE",
+  "CUSTOM / OTHER",
+]
+
+const FORMAT_OPTIONS: { id: string; label: string; desc: string }[] = [
+  {
+    id: "KNOCKOUT",
+    label: "Single Elimination (Knockout)",
+    desc: "Direct single bracket, winner advances",
+  },
+  {
+    id: "DOUBLE_ELIM",
+    label: "Double Elimination (Upper & Lower)",
+    desc: "Upper bracket + Losers lower bracket + Grand Final",
+  },
+  {
+    id: "ROUND_ROBIN",
+    label: "Round Robin (League Table)",
+    desc: "Every team plays every other team; table standings",
+  },
+  {
+    id: "SWISS",
+    label: "Swiss System (3W Advance / 3L Elim)",
+    desc: "Record-based rounds (CS Major / VCT format)",
+  },
+  {
+    id: "GSL_GROUPS",
+    label: "GSL Dual-Tournament Groups → Playoffs",
+    desc: "4-team GSL groups into playoffs",
+  },
 ]
 
 function CreateTournamentModal({
@@ -2071,18 +2126,26 @@ function CreateTournamentModal({
 }) {
   const [name, setName] = useState("VANTA VALORANT INVITATIONAL 2026")
   const [game, setGame] = useState("VALORANT")
+  const [customGame, setCustomGame] = useState("")
   const [season, setSeason] = useState("SEASON 01")
+  const [formatType, setFormatType] = useState("KNOCKOUT")
   const [format, setFormat] = useState("Single Elimination Knockout · BO1")
   const [slots, setSlots] = useState("8")
   const [prizePool, setPrizePool] = useState("$50,000")
   const [region, setRegion] = useState("GLOBAL")
+  const [registrationDeadline, setRegistrationDeadline] = useState(
+    "2026-09-10 18:00 UTC",
+  )
+  const [startDate, setStartDate] = useState("2026-09-12 16:00 UTC")
 
   const inputClass =
     "w-full border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
 
+  const activeGame = game === "CUSTOM / OTHER" ? customGame || "ESPORTS" : game
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
-      <div className="relative w-full max-w-lg border border-accent bg-surface p-6 shadow-2xl">
+      <div className="relative w-full max-w-xl border border-accent bg-surface p-6 shadow-2xl">
         <div className="flex items-center justify-between border-b border-border pb-3">
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs font-bold text-accent">
@@ -2100,32 +2163,73 @@ function CreateTournamentModal({
           </button>
         </div>
 
-        <div className="mt-4 space-y-3 max-h-[70vh] overflow-y-auto pr-1">
-          <div>
-            <label className="font-mono text-[10px] text-muted">
-              COMPETITIVE GAME TITLE
-            </label>
-            <select
-              className={`${inputClass} mt-1`}
-              value={game}
-              onChange={(e) => {
-                setGame(e.target.value)
-                if (
-                  name.includes("VALORANT") &&
-                  e.target.value !== "VALORANT"
-                ) {
-                  setName(`VANTA ${e.target.value} CHAMPIONSHIP`)
-                }
-              }}
-            >
-              {GAME_OPTIONS.map((g) => (
-                <option key={g} value={g}>
-                  {g}
-                </option>
-              ))}
-            </select>
+        <div className="mt-4 space-y-3.5 max-h-[72vh] overflow-y-auto pr-1">
+          {/* Game Selection */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="font-mono text-[10px] text-muted">
+                COMPETITIVE GAME
+              </label>
+              <select
+                className={`${inputClass} mt-1`}
+                value={game}
+                onChange={(e) => {
+                  setGame(e.target.value)
+                  if (e.target.value !== "CUSTOM / OTHER") {
+                    setName(`VANTA ${e.target.value} CHAMPIONSHIP 2026`)
+                  }
+                }}
+              >
+                {GAME_OPTIONS.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {game === "CUSTOM / OTHER" ? (
+              <div>
+                <label className="font-mono text-[10px] text-muted">
+                  CUSTOM GAME TITLE
+                </label>
+                <input
+                  className={`${inputClass} mt-1`}
+                  placeholder="Enter game title"
+                  value={customGame}
+                  onChange={(e) => setCustomGame(e.target.value)}
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="font-mono text-[10px] text-muted">
+                  REGION / SERVER
+                </label>
+                <select
+                  className={`${inputClass} mt-1`}
+                  value={region}
+                  onChange={(e) => setRegion(e.target.value)}
+                >
+                  {[
+                    "GLOBAL",
+                    "NA",
+                    "EU",
+                    "APAC",
+                    "SA",
+                    "MENA",
+                    "KOREA",
+                    "JAPAN",
+                    "CHINA",
+                  ].map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
+          {/* Tournament Name */}
           <div>
             <label className="font-mono text-[10px] text-muted">
               TOURNAMENT NAME
@@ -2138,7 +2242,87 @@ function CreateTournamentModal({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          {/* Format Type */}
+          <div>
+            <label className="font-mono text-[10px] text-muted">
+              TOURNAMENT FORMAT TYPE
+            </label>
+            <select
+              className={`${inputClass} mt-1 font-mono font-bold text-accent`}
+              value={formatType}
+              onChange={(e) => {
+                setFormatType(e.target.value)
+                const opt = FORMAT_OPTIONS.find((f) => f.id === e.target.value)
+                if (opt) setFormat(`${opt.label} · BO1/BO3`)
+              }}
+            >
+              {FORMAT_OPTIONS.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 font-mono text-[9px] text-muted">
+              {FORMAT_OPTIONS.find((f) => f.id === formatType)?.desc}
+            </p>
+          </div>
+
+          {/* Dates: Registration End & Start Date */}
+          <div className="grid grid-cols-2 gap-3 border border-border bg-background/40 p-3">
+            <div>
+              <label className="font-mono text-[9px] font-bold text-muted uppercase">
+                REGISTRATION DEADLINE (END DATE)
+              </label>
+              <input
+                className={`${inputClass} mt-1`}
+                value={registrationDeadline}
+                onChange={(e) => setRegistrationDeadline(e.target.value)}
+                placeholder="e.g. 2026-09-10 18:00 UTC"
+              />
+            </div>
+            <div>
+              <label className="font-mono text-[9px] font-bold text-muted uppercase">
+                TOURNAMENT START DATE
+              </label>
+              <input
+                className={`${inputClass} mt-1`}
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                placeholder="e.g. 2026-09-12 16:00 UTC"
+              />
+            </div>
+          </div>
+
+          {/* Slots, Prize, Season */}
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="font-mono text-[10px] text-muted">
+                TEAM CAPACITY
+              </label>
+              <select
+                className={`${inputClass} mt-1`}
+                value={slots}
+                onChange={(e) => setSlots(e.target.value)}
+              >
+                <option value="4">4 Teams</option>
+                <option value="8">8 Teams</option>
+                <option value="12">12 Teams</option>
+                <option value="16">16 Teams</option>
+                <option value="24">24 Teams</option>
+                <option value="32">32 Teams</option>
+              </select>
+            </div>
+            <div>
+              <label className="font-mono text-[10px] text-muted">
+                PRIZE POOL
+              </label>
+              <input
+                className={`${inputClass} mt-1`}
+                value={prizePool}
+                onChange={(e) => setPrizePool(e.target.value)}
+                placeholder="e.g. $50,000"
+              />
+            </div>
             <div>
               <label className="font-mono text-[10px] text-muted">
                 SEASON / SERIES
@@ -2150,60 +2334,6 @@ function CreateTournamentModal({
                 placeholder="e.g. SEASON 01"
               />
             </div>
-            <div>
-              <label className="font-mono text-[10px] text-muted">
-                TOTAL TEAM SLOTS
-              </label>
-              <select
-                className={`${inputClass} mt-1`}
-                value={slots}
-                onChange={(e) => setSlots(e.target.value)}
-              >
-                <option value="4">4 Teams (Knockout)</option>
-                <option value="8">8 Teams (Quarterfinals → Finals)</option>
-                <option value="16">16 Teams (Round of 16)</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="font-mono text-[10px] text-muted">
-                TOTAL PRIZE POOL
-              </label>
-              <input
-                className={`${inputClass} mt-1`}
-                value={prizePool}
-                onChange={(e) => setPrizePool(e.target.value)}
-                placeholder="e.g. $50,000"
-              />
-            </div>
-            <div>
-              <label className="font-mono text-[10px] text-muted">REGION</label>
-              <select
-                className={`${inputClass} mt-1`}
-                value={region}
-                onChange={(e) => setRegion(e.target.value)}
-              >
-                {["GLOBAL", "NA", "EU", "APAC", "SA", "MENA"].map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="font-mono text-[10px] text-muted">
-              BRACKET / MATCH FORMAT
-            </label>
-            <input
-              className={`${inputClass} mt-1`}
-              value={format}
-              onChange={(e) => setFormat(e.target.value)}
-              placeholder="Single Elimination Knockout · BO1"
-            />
           </div>
         </div>
 
@@ -2219,12 +2349,15 @@ function CreateTournamentModal({
             onClick={() =>
               onCreate({
                 name,
-                game,
+                game: activeGame,
                 season,
                 format,
+                formatType,
                 slots: Number(slots),
                 prizePool,
                 region,
+                registrationDeadline,
+                startDate,
               })
             }
             className="bg-accent px-5 py-2 font-mono text-xs font-bold text-accent-foreground disabled:opacity-50"
@@ -2251,12 +2384,19 @@ function EditTournamentModal({
   const [name, setName] = useState(t.name || "")
   const [game, setGame] = useState(t.game || "VALORANT")
   const [season, setSeason] = useState(t.season || "SEASON 01")
+  const [formatType, setFormatType] = useState(t.formatType || "KNOCKOUT")
   const [format, setFormat] = useState(
     t.format || "Single Elimination Knockout · BO1",
   )
   const [slots, setSlots] = useState(String(t.slots || 8))
   const [prizePool, setPrizePool] = useState(t.prizePool || "$50,000")
   const [region, setRegion] = useState(t.region || "GLOBAL")
+  const [registrationDeadline, setRegistrationDeadline] = useState(
+    t.registrationDeadline || "2026-09-10 18:00 UTC",
+  )
+  const [startDate, setStartDate] = useState(
+    t.startDate || "2026-09-12 16:00 UTC",
+  )
   const [status, setStatus] = useState(t.status || "DRAFT")
 
   const inputClass =
@@ -2264,7 +2404,7 @@ function EditTournamentModal({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
-      <div className="relative w-full max-w-lg border border-accent bg-surface p-6 shadow-2xl">
+      <div className="relative w-full max-w-xl border border-accent bg-surface p-6 shadow-2xl">
         <div className="flex items-center justify-between border-b border-border pb-3">
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs font-bold text-accent">
@@ -2279,49 +2419,27 @@ function EditTournamentModal({
           </button>
         </div>
 
-        <div className="mt-4 space-y-3 max-h-[70vh] overflow-y-auto pr-1">
-          <div>
-            <label className="font-mono text-[10px] text-muted">
-              COMPETITIVE GAME
-            </label>
-            <select
-              className={`${inputClass} mt-1`}
-              value={game}
-              onChange={(e) => setGame(e.target.value)}
-            >
-              {GAME_OPTIONS.map((g) => (
-                <option key={g} value={g}>
-                  {g}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="font-mono text-[10px] text-muted">
-              TOURNAMENT NAME
-            </label>
-            <input
-              className={`${inputClass} mt-1`}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-
+        <div className="mt-4 space-y-3.5 max-h-[72vh] overflow-y-auto pr-1">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="font-mono text-[10px] text-muted">
-                SEASON / SERIES
+                COMPETITIVE GAME
               </label>
-              <input
+              <select
                 className={`${inputClass} mt-1`}
-                value={season}
-                onChange={(e) => setSeason(e.target.value)}
-              />
+                value={game}
+                onChange={(e) => setGame(e.target.value)}
+              >
+                {GAME_OPTIONS.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="font-mono text-[10px] text-muted">
-                CURRENT LIFECYCLE STATUS
+                STAGE STATUS
               </label>
               <select
                 className={`${inputClass} mt-1`}
@@ -2348,10 +2466,83 @@ function EditTournamentModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="font-mono text-[10px] text-muted">
+              TOURNAMENT NAME
+            </label>
+            <input
+              className={`${inputClass} mt-1`}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="font-mono text-[10px] text-muted">
+              TOURNAMENT FORMAT TYPE
+            </label>
+            <select
+              className={`${inputClass} mt-1 font-mono font-bold text-accent`}
+              value={formatType}
+              onChange={(e) => {
+                setFormatType(e.target.value)
+                const opt = FORMAT_OPTIONS.find((f) => f.id === e.target.value)
+                if (opt) setFormat(`${opt.label} · BO1/BO3`)
+              }}
+            >
+              {FORMAT_OPTIONS.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Dates */}
+          <div className="grid grid-cols-2 gap-3 border border-border bg-background/40 p-3">
+            <div>
+              <label className="font-mono text-[9px] font-bold text-muted uppercase">
+                REGISTRATION DEADLINE
+              </label>
+              <input
+                className={`${inputClass} mt-1`}
+                value={registrationDeadline}
+                onChange={(e) => setRegistrationDeadline(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="font-mono text-[9px] font-bold text-muted uppercase">
+                START DATE
+              </label>
+              <input
+                className={`${inputClass} mt-1`}
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="font-mono text-[10px] text-muted">
-                TOTAL PRIZE POOL
+                TEAM CAPACITY
+              </label>
+              <select
+                className={`${inputClass} mt-1`}
+                value={slots}
+                onChange={(e) => setSlots(e.target.value)}
+              >
+                <option value="4">4 Teams</option>
+                <option value="8">8 Teams</option>
+                <option value="12">12 Teams</option>
+                <option value="16">16 Teams</option>
+                <option value="24">24 Teams</option>
+                <option value="32">32 Teams</option>
+              </select>
+            </div>
+            <div>
+              <label className="font-mono text-[10px] text-muted">
+                PRIZE POOL
               </label>
               <input
                 className={`${inputClass} mt-1`}
@@ -2366,37 +2557,22 @@ function EditTournamentModal({
                 value={region}
                 onChange={(e) => setRegion(e.target.value)}
               >
-                {["GLOBAL", "NA", "EU", "APAC", "SA", "MENA"].map((r) => (
+                {[
+                  "GLOBAL",
+                  "NA",
+                  "EU",
+                  "APAC",
+                  "SA",
+                  "MENA",
+                  "KOREA",
+                  "JAPAN",
+                  "CHINA",
+                ].map((r) => (
                   <option key={r} value={r}>
                     {r}
                   </option>
                 ))}
               </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="font-mono text-[10px] text-muted">
-                TOTAL SLOTS
-              </label>
-              <select
-                className={`${inputClass} mt-1`}
-                value={slots}
-                onChange={(e) => setSlots(e.target.value)}
-              >
-                <option value="4">4 Teams</option>
-                <option value="8">8 Teams</option>
-                <option value="16">16 Teams</option>
-              </select>
-            </div>
-            <div>
-              <label className="font-mono text-[10px] text-muted">FORMAT</label>
-              <input
-                className={`${inputClass} mt-1`}
-                value={format}
-                onChange={(e) => setFormat(e.target.value)}
-              />
             </div>
           </div>
         </div>
@@ -2416,9 +2592,12 @@ function EditTournamentModal({
                 game,
                 season,
                 format,
+                formatType,
                 slots: Number(slots),
                 prizePool,
                 region,
+                registrationDeadline,
+                startDate,
                 status,
               })
             }
@@ -2427,6 +2606,264 @@ function EditTournamentModal({
             {busy ? "SAVING…" : "SAVE CHANGES"}
           </button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function FixturesAdmin({
+  matches,
+  teams,
+  busy,
+  can,
+  op,
+}: {
+  matches: Match[]
+  teams: Team[]
+  busy: boolean
+  can: (p: string) => boolean
+  op: (label: string, action: string, body?: any) => void
+}) {
+  const canManage = can("tournaments.manage")
+  const [editingMatchId, setEditingMatchId] = useState<string | null>(null)
+  const [teamA, setTeamA] = useState<string>("")
+  const [teamB, setTeamB] = useState<string>("")
+  const [time, setTime] = useState<string>("")
+  const [format, setFormat] = useState<"BO1" | "BO3" | "BO5">("BO1")
+  const [roundName, setRoundName] = useState<string>("")
+
+  function startEditFixture(m: Match) {
+    setEditingMatchId(m.id)
+    setTeamA(m.a || "")
+    setTeamB(m.b || "")
+    setTime(m.time || "")
+    setFormat(m.format || "BO1")
+    setRoundName(m.round || "")
+  }
+
+  function saveFixture(matchId: string) {
+    op(`Update Fixture ${matchId}`, "update-fixture", {
+      matchId,
+      teamAId: teamA || null,
+      teamBId: teamB || null,
+      time,
+      format,
+      roundName,
+    })
+    setEditingMatchId(null)
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="border border-border bg-surface p-5">
+        <div className="flex flex-col justify-between gap-3 border-b border-border pb-4 sm:flex-row sm:items-center">
+          <div>
+            <Mono>TOURNAMENT FIXTURES &amp; MATCH-UPS</Mono>
+            <p className="mt-1 text-xs text-muted">
+              GOD &amp; DEMI_GOD match-up controls: pair any team against any
+              team, change series formats, scheduled match times, or
+              auto-generate pairings.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => op("Generate format fixtures", "generate-bracket")}
+              disabled={busy || !canManage}
+              className={btn}
+            >
+              ⚡ AUTO-GENERATE BRACKET
+            </button>
+            <button
+              onClick={() =>
+                op("Randomize team seeds", "seed-teams", { method: "random" })
+              }
+              disabled={busy || !canManage || teams.length < 2}
+              className={btn}
+            >
+              🎲 RANDOMIZE SEEDS
+            </button>
+          </div>
+        </div>
+
+        {matches.length === 0 ? (
+          <div className="py-12 text-center">
+            <Mono className="text-muted">NO FIXTURES GENERATED YET</Mono>
+            <p className="mt-1 text-xs text-muted">
+              Click &quot;Auto-Generate Bracket&quot; above to create match
+              fixtures based on your selected tournament format.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
+            {matches.map((m) => {
+              const isEditing = editingMatchId === m.id
+              const teamAObj = teams.find((x) => x.id === m.a)
+              const teamBObj = teams.find((x) => x.id === m.b)
+
+              return (
+                <div
+                  key={m.id}
+                  className="border border-border bg-surface-raised p-4 space-y-3"
+                >
+                  <div className="flex items-center justify-between border-b border-border/60 pb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-accent">
+                        {m.id}
+                      </span>
+                      <span className="font-mono text-[10px] text-muted">
+                        · {m.round}
+                      </span>
+                    </div>
+                    <span className="border border-border bg-surface px-1.5 py-0.5 font-mono text-[9px] font-bold text-muted">
+                      {m.format || "BO1"}
+                    </span>
+                  </div>
+
+                  {isEditing ? (
+                    <div className="space-y-2 border border-accent/40 bg-accent/5 p-3">
+                      <div>
+                        <label className="font-mono text-[8px] text-muted">
+                          ROUND TITLE
+                        </label>
+                        <input
+                          className="w-full border border-border bg-background px-2 py-1 font-mono text-xs"
+                          value={roundName}
+                          onChange={(e) => setRoundName(e.target.value)}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="font-mono text-[8px] text-muted">
+                            TEAM A
+                          </label>
+                          <select
+                            className="w-full border border-border bg-background px-2 py-1 font-mono text-xs"
+                            value={teamA}
+                            onChange={(e) => setTeamA(e.target.value)}
+                          >
+                            <option value="">-- AWAITING (TBD) --</option>
+                            {teams.map((t) => (
+                              <option key={t.id} value={t.id}>
+                                [{t.tag}] {t.name} (Seed {t.seed ?? "—"})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="font-mono text-[8px] text-muted">
+                            TEAM B
+                          </label>
+                          <select
+                            className="w-full border border-border bg-background px-2 py-1 font-mono text-xs"
+                            value={teamB}
+                            onChange={(e) => setTeamB(e.target.value)}
+                          >
+                            <option value="">-- AWAITING (TBD) --</option>
+                            {teams.map((t) => (
+                              <option key={t.id} value={t.id}>
+                                [{t.tag}] {t.name} (Seed {t.seed ?? "—"})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="font-mono text-[8px] text-muted">
+                            SERIES FORMAT
+                          </label>
+                          <select
+                            className="w-full border border-border bg-background px-2 py-1 font-mono text-xs"
+                            value={format}
+                            onChange={(e) => setFormat(e.target.value as any)}
+                          >
+                            <option value="BO1">Best of 1 (BO1)</option>
+                            <option value="BO3">Best of 3 (BO3)</option>
+                            <option value="BO5">Best of 5 (BO5)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="font-mono text-[8px] text-muted">
+                            MATCH SCHEDULE / TIME
+                          </label>
+                          <input
+                            className="w-full border border-border bg-background px-2 py-1 font-mono text-xs"
+                            value={time}
+                            onChange={(e) => setTime(e.target.value)}
+                            placeholder="e.g. Sep 14, 18:00 UTC"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-end gap-2 pt-2">
+                        <button
+                          onClick={() => setEditingMatchId(null)}
+                          className="border border-border px-3 py-1 font-mono text-[10px] text-muted hover:text-foreground"
+                        >
+                          CANCEL
+                        </button>
+                        <button
+                          onClick={() => saveFixture(m.id)}
+                          className="bg-accent px-4 py-1 font-mono text-[10px] font-bold text-accent-foreground"
+                        >
+                          SAVE FIXTURE
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between border border-border/50 bg-background/50 px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-[9px] text-muted">
+                            {teamAObj?.seed != null ? `#${teamAObj.seed}` : "—"}
+                          </span>
+                          <span className="font-bold text-foreground text-xs">
+                            {teamAObj
+                              ? `${teamAObj.name} [${teamAObj.tag}]`
+                              : "TBD"}
+                          </span>
+                        </div>
+                        <span className="font-mono text-xs font-bold text-accent">
+                          {m.scoreA ?? "—"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between border border-border/50 bg-background/50 px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-[9px] text-muted">
+                            {teamBObj?.seed != null ? `#${teamBObj.seed}` : "—"}
+                          </span>
+                          <span className="font-bold text-foreground text-xs">
+                            {teamBObj
+                              ? `${teamBObj.name} [${teamBObj.tag}]`
+                              : "TBD"}
+                          </span>
+                        </div>
+                        <span className="font-mono text-xs font-bold text-accent">
+                          {m.scoreB ?? "—"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1 font-mono text-[10px] text-muted">
+                        <span>
+                          {m.time || "SCHEDULED"} · {m.server}
+                        </span>
+                        {canManage && (
+                          <button
+                            onClick={() => startEditFixture(m)}
+                            className="border border-border px-2 py-0.5 text-[9px] text-muted hover:border-accent hover:text-accent"
+                          >
+                            ✎ EDIT FIXTURE
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )

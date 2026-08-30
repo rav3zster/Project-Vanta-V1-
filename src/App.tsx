@@ -1,11 +1,15 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { brand } from "./config/brand";
 import { AuthProvider, useAuth } from "./lib/auth";
 import { SiteProvider, useSite } from "./lib/site";
 import { ThemeProvider } from "./lib/theme";
 import { AuthModal } from "./components/AuthModal";
-import { Control } from "./components/Control";
 import { useRoute, navigate, type Route } from "./lib/router";
+
+// Control is the admin operations panel (GOD/DEMI_GOD only) and pulls in the
+// roster editor, image cropper, match resolver, etc. Splitting it into its own
+// chunk keeps that weight out of the bundle every anonymous visitor downloads.
+const Control = lazy(() => import("./components/Control").then((m) => ({ default: m.Control })));
 import {
   TournamentsPage, TournamentDetailPage, MatchesPage, TeamsPage,
   RosterPage, NewsPage, RegisterPage, DashboardPage, NotificationsPage, ProfilePage,
@@ -618,6 +622,14 @@ function Home() {
   );
 }
 
+function ControlLoading() {
+  return (
+    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-background">
+      <Mono className="animate-pulse text-sm">LOADING CONTROL…</Mono>
+    </div>
+  );
+}
+
 function AppShell() {
   const { profile } = useAuth();
   const { refresh } = useSite();
@@ -651,7 +663,11 @@ function AppShell() {
       <Footer onLogin={openLogin} />
 
       {showAuth && !profile && <AuthModal onClose={() => setShowAuth(false)} />}
-      {showControl && profile && <Control onClose={() => setShowControl(false)} />}
+      {showControl && profile && (
+        <Suspense fallback={<ControlLoading />}>
+          <Control onClose={() => setShowControl(false)} />
+        </Suspense>
+      )}
     </div>
   );
 }

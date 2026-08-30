@@ -42,6 +42,17 @@ function isFounder(username?: string, email?: string): boolean {
 
 // ---- Auth helpers -----------------------------------------------------------
 
+// Consumes a role pre-assigned via /users/role-by-email before the target ever
+// signed up. One-shot: the override key is deleted once applied so it can't be
+// replayed if the account is later demoted through normal role management.
+async function takeRoleOverride(email: string): Promise<Role | null> {
+  const key = `role-override:${email.toLowerCase().trim()}`;
+  const override: { role: Role } | undefined = await kv.get(key);
+  if (!override) return null;
+  await kv.del(key);
+  return override.role;
+}
+
 async function getProfile(accessToken: string | undefined): Promise<Profile | null> {
   if (!accessToken) return null;
   const { data, error } = await admin().auth.getUser(accessToken);
@@ -71,11 +82,14 @@ async function getProfile(accessToken: string | undefined): Promise<Profile | nu
 
   // First login with no profile yet (e.g. Google OAuth): provision automatically.
   // Founders and the very first account ever created are promoted to GOD so the
-  // platform is bootstrappable without manual DB edits.
+  // platform is bootstrappable without manual DB edits. A role pre-assigned by
+  // email (Control → Users) takes priority over the first-user bootstrap.
   const username = displayName;
   const allUsers = await kv.getByPrefix("user:");
-  const role: Role =
-    isFounder(username, u.email ?? "") || allUsers.length === 0 ? "GOD" : "HUMAN";
+  const override = await takeRoleOverride(u.email ?? "");
+  const role: Role = isFounder(username, u.email ?? "")
+    ? "GOD"
+    : override ?? (allUsers.length === 0 ? "GOD" : "HUMAN");
   const profile: Profile = {
     id: u.id, email: u.email ?? "", username,
     region: meta.region ?? "GLOBAL", role,
@@ -148,10 +162,13 @@ app.post(`${P}/signup`, async (c) => {
     if (error) return c.json({ error: error.message }, 400);
 
     // Bootstrap: the very first account ever created is promoted to GOD so the
-    // platform is usable without manual DB edits; everyone after is HUMAN.
+    // platform is usable without manual DB edits; everyone after is HUMAN unless
+    // a role was pre-assigned to this email via Control → Users.
     const existingUsers = await kv.getByPrefix("user:");
-    const role: Role =
-      isFounder(username, email) || existingUsers.length === 0 ? "GOD" : "HUMAN";
+    const override = await takeRoleOverride(email);
+    const role: Role = isFounder(username, email)
+      ? "GOD"
+      : override ?? (existingUsers.length === 0 ? "GOD" : "HUMAN");
 
     const profile: Profile = {
       id: data.user.id, email, username,

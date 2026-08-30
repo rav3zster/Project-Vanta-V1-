@@ -147,36 +147,33 @@ export function PlayerDossier({ player, onClose }: PlayerDossierProps) {
         </button>
       </div>
 
-      {/* Operator Title Card Banner */}
-      <div className="border-b border-border bg-surface-secondary/50 p-5 sm:p-6">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="border border-accent/40 bg-background/80 px-2 py-0.5 font-mono text-[10px] tracking-[0.15em] text-accent">
+      {/* Operator Title Card Banner — compact to preserve scroll space below */}
+      <div className="border-b border-border bg-surface-secondary/50 px-5 py-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="border border-accent/40 bg-background/80 px-2 py-0.5 font-mono text-[9px] tracking-[0.15em] text-accent">
                 {player.game || "VALORANT"}
               </span>
-              <span className="border border-border bg-background/80 px-2 py-0.5 font-mono text-[10px] tracking-[0.1em] text-foreground">
+              <span className="border border-border bg-background/80 px-2 py-0.5 font-mono text-[9px] tracking-[0.1em] text-foreground">
                 {player.role}
               </span>
               {player.rank && (
-                <span className="border border-border bg-background/80 px-2 py-0.5 font-mono text-[10px] tracking-[0.1em] text-accent">
+                <span className="border border-border bg-background/80 px-2 py-0.5 font-mono text-[9px] tracking-[0.1em] text-accent">
                   ◆ {player.rank}
                 </span>
               )}
             </div>
-            <h2 className="mt-2 font-display text-3xl sm:text-4xl font-black tracking-tight text-foreground">
+            <h2 className="mt-1 font-display text-2xl font-black tracking-tight text-foreground leading-tight">
               {player.handle}
             </h2>
-            <div className="font-mono text-xs text-muted">
-              {player.name} · Signed to {player.region} Competitive House
+            <div className="font-mono text-[10px] text-muted">
+              {player.name ? `${player.name} · ` : ""}Signed to {player.region} Competitive House
             </div>
           </div>
-
-          <div className="flex items-center gap-4">
-            <div className="border border-border bg-surface px-3 py-2 text-right">
-              <Mono className="text-[9px] text-muted">CAREER EARNINGS</Mono>
-              <div className="font-mono text-lg font-bold text-accent">{player.winnings || "$0"}</div>
-            </div>
+          <div className="shrink-0 border border-border bg-surface px-3 py-1.5 text-right">
+            <div className="font-mono text-[9px] tracking-[0.1em] text-muted">CAREER EARNINGS</div>
+            <div className="font-mono text-base font-bold text-accent">{player.winnings || "$0"}</div>
           </div>
         </div>
       </div>
@@ -203,47 +200,26 @@ export function PlayerDossier({ player, onClose }: PlayerDossierProps) {
         ))}
       </div>
 
-      {/* Tab Panels */}
-      <div className="p-5 sm:p-6">
+      {/* Tab Panels — flex-1 + overflow-y-auto so content scrolls inside the fixed panel */}
+      <div className="flex-1 overflow-y-auto p-4 sm:p-5">
         {/* TAB 1: SENSITIVITY & MOUSE SETTINGS */}
         {activeTab === "SETTINGS" && (
-          <div className="space-y-6">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="border border-border bg-background/60 p-4">
-                <Mono className="text-[10px] text-muted">DPI (CPI)</Mono>
-                <div className="mt-1 font-display text-xl font-black text-foreground">{telemetry.settings.dpi}</div>
-                <div className="mt-0.5 font-mono text-[9px] text-muted">Hardware sensor resolution</div>
-              </div>
-
-              <div className="border border-border bg-background/60 p-4">
-                <Mono className="text-[10px] text-muted">IN-GAME SENSITIVITY</Mono>
-                <div className="mt-1 font-display text-xl font-black text-accent">{telemetry.settings.sensitivity}</div>
-                <div className="mt-0.5 font-mono text-[9px] text-muted">Raw input enabled</div>
-              </div>
-
-              <div className="border border-border bg-background/60 p-4">
-                <Mono className="text-[10px] text-muted">EFFECTIVE DPI (eDPI)</Mono>
-                <div className="mt-1 font-display text-xl font-black text-foreground">{telemetry.settings.edpi}</div>
-                <div className="mt-0.5 font-mono text-[9px] text-muted">DPI × In-Game Sens</div>
-              </div>
-
-              <div className="border border-border bg-background/60 p-4">
-                <Mono className="text-[10px] text-muted">SCOPED SENS MULTIPLIER</Mono>
-                <div className="mt-1 font-mono text-base font-bold text-foreground">{telemetry.settings.scopedSens}</div>
-                <div className="mt-0.5 font-mono text-[9px] text-muted">ADS / Sniper ratio</div>
-              </div>
-
-              <div className="border border-border bg-background/60 p-4">
-                <Mono className="text-[10px] text-muted">USB POLLING RATE</Mono>
-                <div className="mt-1 font-mono text-base font-bold text-foreground">{telemetry.settings.pollingRate}</div>
-                <div className="mt-0.5 font-mono text-[9px] text-muted">1.0ms reporting interval</div>
-              </div>
-
-              <div className="border border-border bg-background/60 p-4">
-                <Mono className="text-[10px] text-muted">DISPLAY RESOLUTION</Mono>
-                <div className="mt-1 font-mono text-base font-bold text-foreground">{telemetry.settings.resolution}</div>
-                <div className="mt-0.5 font-mono text-[9px] text-muted">Competitive aspect ratio</div>
-              </div>
+          <div className="space-y-4">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                { label: "DPI (CPI)", value: telemetry.settings.dpi, sub: "Hardware sensor", accent: false },
+                { label: "IN-GAME SENSITIVITY", value: telemetry.settings.sensitivity, sub: "Raw input enabled", accent: true },
+                { label: "EFFECTIVE DPI (eDPI)", value: telemetry.settings.edpi, sub: "DPI × In-Game Sens", accent: false },
+                { label: "SCOPED SENS MULT.", value: telemetry.settings.scopedSens, sub: "ADS / Sniper ratio", accent: false },
+                { label: "USB POLLING RATE", value: telemetry.settings.pollingRate, sub: "1.0ms reporting", accent: false },
+                { label: "DISPLAY RESOLUTION", value: telemetry.settings.resolution, sub: "Competitive ratio", accent: false },
+              ].map(({ label, value, sub, accent }) => (
+                <div key={label} className="border border-border bg-background/60 px-3 py-2.5">
+                  <div className="font-mono text-[9px] tracking-[0.12em] text-muted">{label}</div>
+                  <div className={`mt-0.5 font-display text-base font-black leading-tight ${accent ? "text-accent" : "text-foreground"}`}>{value}</div>
+                  <div className="mt-0.5 font-mono text-[9px] text-muted/70">{sub}</div>
+                </div>
+              ))}
             </div>
 
             {/* Crosshair Profile Strip */}

@@ -582,7 +582,16 @@ export function DashboardPage({ onControl }: { onControl: () => void }) {
   }, [profile?.username]);
 
   useEffect(() => {
-    api.getNotifications().then(({ notifications }) => setNotifs(notifications ?? [])).catch(() => {});
+    const loadNotifs = () => {
+      api.getNotifications().then(({ notifications }) => setNotifs(notifications ?? [])).catch(() => {});
+    };
+    loadNotifs();
+    const interval = setInterval(loadNotifs, 4000);
+    window.addEventListener("focus", loadNotifs);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", loadNotifs);
+    };
   }, []);
 
   const admin = effectiveRole !== "HUMAN";
@@ -702,10 +711,20 @@ export function DashboardPage({ onControl }: { onControl: () => void }) {
   );
 }
 
-// ---------- NOTIFICATIONS ----------
 export function NotificationsPage() {
   const [notifs, setNotifs] = useState<any[]>([]);
-  useEffect(() => { api.getNotifications().then(({ notifications }) => setNotifs(notifications ?? [])).catch(() => {}); }, []);
+  useEffect(() => {
+    const loadNotifs = () => {
+      api.getNotifications().then(({ notifications }) => setNotifs(notifications ?? [])).catch(() => {});
+    };
+    loadNotifs();
+    const interval = setInterval(loadNotifs, 4000);
+    window.addEventListener("focus", loadNotifs);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", loadNotifs);
+    };
+  }, []);
   return (
     <>
       <PageHead kicker={`${brand.codename} // SIGNALS`} title="Notifications" />

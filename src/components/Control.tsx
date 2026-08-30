@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../lib/auth";
 import { useSite } from "../lib/site";
-import { api, type Player } from "../lib/supabase";
+import { api, supabase, type Player } from "../lib/supabase";
 import { StatusChip, Mono } from "./ui";
 import { Bracket } from "./Bracket";
 import { getGameConfig, GAME_LIST } from "../config/games";
@@ -46,7 +46,37 @@ export function Control({ onClose }: { onClose: () => void }) {
     try { setRoster((await api.getRoster()).players); } catch { /* ignore */ }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+
+    // Live push listener from Supabase Postgres
+    const channel = supabase
+      .channel("control-realtime-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "kv_store_d346d9b8" },
+        () => {
+          load();
+        }
+      )
+      .subscribe();
+
+    // 3-second background polling guarantee
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible" && !busy) {
+        load();
+      }
+    }, 3000);
+
+    const onFocus = () => load();
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [busy]);
 
   function push(msg: string, kind: "ok" | "err" = "ok") {
     setFeed((f) => [{ msg, kind }, ...f].slice(0, 8));

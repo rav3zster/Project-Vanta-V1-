@@ -14,6 +14,8 @@ export type Permission =
   | "disputes.resolve"
   | "disputes.create"
   | "announcements.publish"
+  | "announcements.edit"
+  | "announcements.delete"
   | "roster.manage"
   | "admins.manage"
   | "roles.manage"
@@ -29,6 +31,8 @@ const DEMI_GOD_PERMS: Permission[] = [
   "matches.resolve",
   "disputes.resolve",
   "announcements.publish",
+  "announcements.edit",
+  "announcements.delete",
   "roster.manage",
   "audit.view",
   "results.submit",
@@ -51,6 +55,7 @@ export function permissionsFor(role: Role): Permission[] {
       "tournaments.manage", "registrations.approve", "checkins.manage",
       "seeding.manage", "brackets.generate", "matches.resolve", "results.submit",
       "disputes.resolve", "disputes.create", "announcements.publish",
+      "announcements.edit", "announcements.delete",
       "roster.manage", "admins.manage", "roles.manage", "audit.view", "seed.run",
     ];
   }

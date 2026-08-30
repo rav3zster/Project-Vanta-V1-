@@ -12,6 +12,8 @@ const DEMI_GOD_PERMS = [
   "matches.resolve",
   "disputes.resolve",
   "announcements.publish",
+  "announcements.edit",
+  "announcements.delete",
   "roster.manage",
   "audit.view",
   "results.submit",

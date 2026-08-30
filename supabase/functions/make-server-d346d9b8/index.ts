@@ -16,7 +16,7 @@ app.use("*", logger(console.log));
 app.use("/*", cors({
   origin: "*",
   allowHeaders: ["Content-Type", "Authorization"],
-  allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   exposeHeaders: ["Content-Length"],
   maxAge: 600,
 }));
@@ -390,6 +390,120 @@ app.post(`${P}/announcements`, async (c) => {
     return errJson(c, e);
   }
 });
+
+async function findAnnouncementKey(id?: string, ts?: string): Promise<{ key: string; item: any } | null> {
+  if (ts) {
+    const direct = await kv.get(`announcement:${ts}`);
+    if (direct) return { key: `announcement:${ts}`, item: direct };
+  }
+  if (id) {
+    const directId = await kv.get(`announcement:${id}`);
+    if (directId) return { key: `announcement:${id}`, item: directId };
+    const directRaw = await kv.get(id);
+    if (directRaw) return { key: id, item: directRaw };
+  }
+  try {
+    const { data } = await admin()
+      .from("kv_store_d346d9b8")
+      .select("key, value")
+      .like("key", "announcement:%");
+    if (data) {
+      for (const row of data) {
+        if (
+          (id && row.value?.id === id) ||
+          (ts && row.value?.ts === ts) ||
+          (id && row.key.includes(id)) ||
+          (ts && row.key.includes(ts))
+        ) {
+          return { key: row.key, item: row.value };
+        }
+      }
+    }
+  } catch { /* ignore fallback error */ }
+  return null;
+}
+
+// Edit an existing announcement (POST RPC)
+app.post(`${P}/announcements/update`, async (c) => {
+  try {
+    const profile = await requireProfile(c);
+    requirePerm(profile, "announcements.edit");
+    const { id, ts, title, body, severity } = await c.req.json();
+    const found = await findAnnouncementKey(id, ts);
+    if (!found) return c.json({ error: "Announcement not found" }, 404);
+    const updated = {
+      ...found.item,
+      ...(title !== undefined && { title }),
+      ...(body !== undefined && { body }),
+      ...(severity !== undefined && { severity }),
+      editedAt: new Date().toISOString(),
+      editedBy: profile.username,
+    };
+    await kv.set(found.key, updated);
+    await audit(profile, "announcement.edited", updated.id || found.key, { title: updated.title });
+    return c.json({ announcement: updated });
+  } catch (e) {
+    return errJson(c, e);
+  }
+});
+
+// Delete an announcement permanently (POST RPC)
+app.post(`${P}/announcements/delete`, async (c) => {
+  try {
+    const profile = await requireProfile(c);
+    requirePerm(profile, "announcements.delete");
+    const { id, ts } = await c.req.json();
+    const found = await findAnnouncementKey(id, ts);
+    if (!found) return c.json({ error: "Announcement not found" }, 404);
+    await kv.del(found.key);
+    await audit(profile, "announcement.deleted", found.item?.id || found.key, { title: found.item?.title });
+    return c.json({ ok: true });
+  } catch (e) {
+    return errJson(c, e);
+  }
+});
+
+// Edit an existing announcement (REST PATCH)
+app.patch(`${P}/announcements/:ts`, async (c) => {
+  try {
+    const profile = await requireProfile(c);
+    requirePerm(profile, "announcements.edit");
+    const ts = c.req.param("ts");
+    const found = await findAnnouncementKey(undefined, ts);
+    if (!found) return c.json({ error: "Announcement not found" }, 404);
+    const { title, body, severity } = await c.req.json();
+    const updated = {
+      ...found.item,
+      ...(title !== undefined && { title }),
+      ...(body !== undefined && { body }),
+      ...(severity !== undefined && { severity }),
+      editedAt: new Date().toISOString(),
+      editedBy: profile.username,
+    };
+    await kv.set(found.key, updated);
+    await audit(profile, "announcement.edited", updated.id || found.key, { title: updated.title });
+    return c.json({ announcement: updated });
+  } catch (e) {
+    return errJson(c, e);
+  }
+});
+
+// Delete an announcement permanently (REST DELETE)
+app.delete(`${P}/announcements/:ts`, async (c) => {
+  try {
+    const profile = await requireProfile(c);
+    requirePerm(profile, "announcements.delete");
+    const ts = c.req.param("ts");
+    const found = await findAnnouncementKey(undefined, ts);
+    if (!found) return c.json({ error: "Announcement not found" }, 404);
+    await kv.del(found.key);
+    await audit(profile, "announcement.deleted", found.item?.id || found.key, { title: found.item?.title });
+    return c.json({ ok: true });
+  } catch (e) {
+    return errJson(c, e);
+  }
+});
+
 
 // ---- Roster management (GOD & DEMI_GOD) -------------------------------------
 

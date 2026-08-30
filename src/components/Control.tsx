@@ -428,7 +428,20 @@ export function Control({ onClose }: { onClose: () => void }) {
                 <AnnouncementsAdmin
                   list={announcements} busy={busy} can={can}
                   onPost={(b) => run("Publish announcement", () => api.createAnnouncement(b),
-                    (r) => setAnnouncements((prev) => [(r as any).announcement, ...prev]))}
+                    (r) => {
+                      setAnnouncements((prev) => [(r as any).announcement, ...prev]);
+                      refreshSite();
+                    })}
+                  onDelete={(a) => run("Delete announcement", () => api.deleteAnnouncement({ id: a.id, ts: a.ts }),
+                    () => {
+                      setAnnouncements((prev) => prev.filter((item) => item !== a && item.id !== a.id && item.ts !== a.ts));
+                      refreshSite();
+                    })}
+                  onEdit={(a, b) => run("Update announcement", () => api.updateAnnouncement({ id: a.id, ts: a.ts, ...b }),
+                    (r) => {
+                      setAnnouncements((prev) => prev.map((item) => (item === a || item.id === a.id || item.ts === a.ts) ? (r as any).announcement : item));
+                      refreshSite();
+                    })}
                 />
               )}
 
@@ -490,18 +503,49 @@ export function Control({ onClose }: { onClose: () => void }) {
 }
 
 function AnnouncementsAdmin({
-  list, busy, can, onPost,
+  list, busy, can, onPost, onDelete, onEdit,
 }: {
   list: any[]; busy: boolean;
   can: (p: string) => boolean;
   onPost: (b: { title: string; body: string; severity: string }) => void;
+  onDelete: (a: any) => void;
+  onEdit: (a: any, b: { title: string; body: string; severity: string }) => void;
 }) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [severity, setSeverity] = useState("INFO");
+  // editing: announcement item currently being edited, or null
+  const [editing, setEditing] = useState<any | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editBody, setEditBody] = useState("");
+  const [editSeverity, setEditSeverity] = useState("INFO");
+  // confirmDelete: announcement item or id awaiting confirmation, or null
+  const [confirmDelete, setConfirmDelete] = useState<any | null>(null);
+
   const input = "w-full border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent";
+
+  function startEdit(a: any) {
+    setEditing(a);
+    setEditTitle(a.title);
+    setEditBody(a.body);
+    setEditSeverity(a.severity ?? "INFO");
+    setConfirmDelete(null);
+  }
+
+  function cancelEdit() { setEditing(null); }
+
+  function saveEdit() {
+    if (!editing) return;
+    onEdit(editing, { title: editTitle, body: editBody, severity: editSeverity });
+    setEditing(null);
+  }
+
+  const canEdit = can("announcements.edit");
+  const canDelete = can("announcements.delete");
+
   return (
     <div className="space-y-6">
+      {/* Compose */}
       <div className="border border-border bg-surface p-5">
         <Mono>COMPOSE ANNOUNCEMENT</Mono>
         <div className="mt-4 space-y-3">
@@ -523,22 +567,101 @@ function AnnouncementsAdmin({
           </div>
         </div>
       </div>
+
+      {/* Published list */}
       <div className="border border-border bg-surface p-5">
         <Mono>PUBLISHED</Mono>
         <div className="mt-4 space-y-2">
           {list.length === 0 && <Mono>None yet.</Mono>}
-          {list.map((a) => (
-            <div key={a.id} className="flex items-start justify-between gap-4 border border-border p-3">
-              <div className="flex items-start gap-3">
-                <StatusChip status={a.severity} />
-                <div>
-                  <div className="font-display text-sm font-bold">{a.title}</div>
-                  <div className="text-sm text-muted">{a.body}</div>
-                </div>
+          {list.map((a) => {
+            const isEditing = editing && (editing === a || editing.id === a.id || editing.ts === a.ts);
+            const isConfirming = confirmDelete && (confirmDelete === a || confirmDelete.id === a.id || confirmDelete.ts === a.ts);
+            return (
+              <div key={a.id ?? a.ts} className="border border-border">
+                {isEditing ? (
+                  /* ── Inline edit form ── */
+                  <div className="space-y-2 p-3">
+                    <input className={input} value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+                    <textarea className={`${input} min-h-20 resize-y`} value={editBody} onChange={(e) => setEditBody(e.target.value)} />
+                    <div className="flex items-center gap-2">
+                      {["INFO", "SUCCESS", "WARNING", "DANGER"].map((s) => (
+                        <button key={s} onClick={() => setEditSeverity(s)}
+                          className={`font-mono text-[10px] tracking-[0.1em] border px-2 py-1 ${
+                            editSeverity === s ? "border-accent bg-accent/10 text-accent" : "border-border text-muted"
+                          }`}>
+                          {s}
+                        </button>
+                      ))}
+                      <div className="ml-auto flex gap-2">
+                        <button onClick={cancelEdit}
+                          className="border border-border px-3 py-1 font-mono text-[10px] tracking-[0.1em] text-muted hover:border-foreground hover:text-foreground">
+                          CANCEL
+                        </button>
+                        <button onClick={saveEdit} disabled={busy || !editTitle || !editBody}
+                          className={primary}>
+                          SAVE
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* ── Normal read row ── */
+                  <div className="flex items-start justify-between gap-4 p-3">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <StatusChip status={a.severity} />
+                      <div className="min-w-0">
+                        <div className="font-display text-sm font-bold">{a.title}</div>
+                        <div className="text-sm text-muted">{a.body}</div>
+                        {a.editedAt && (
+                          <div className="mt-0.5 font-mono text-[9px] text-muted/60">
+                            Edited {new Date(a.editedAt).toLocaleString()} by {a.editedBy}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <Mono className="shrink-0">{new Date(a.ts).toLocaleDateString()}</Mono>
+                      {canEdit && (
+                        <button
+                          onClick={() => startEdit(a)}
+                          className="border border-border px-2 py-1 font-mono text-[9px] tracking-[0.1em] text-muted transition-colors hover:border-accent hover:text-accent"
+                          title="Edit announcement"
+                        >
+                          EDIT
+                        </button>
+                      )}
+                      {canDelete && (
+                        isConfirming ? (
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => { onDelete(a); setConfirmDelete(null); }}
+                              className="border border-danger bg-danger/10 px-2 py-1 font-mono text-[9px] tracking-[0.1em] text-danger transition-colors hover:bg-danger/20"
+                            >
+                              CONFIRM
+                            </button>
+                            <button
+                              onClick={() => setConfirmDelete(null)}
+                              className="border border-border px-2 py-1 font-mono text-[9px] tracking-[0.1em] text-muted hover:text-foreground"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => { setConfirmDelete(a); setEditing(null); }}
+                            className="border border-border px-2 py-1 font-mono text-[9px] tracking-[0.1em] text-muted transition-colors hover:border-danger hover:text-danger"
+                            title="Delete announcement"
+                          >
+                            DELETE
+                          </button>
+                        )
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-              <Mono className="shrink-0">{new Date(a.ts).toLocaleDateString()}</Mono>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

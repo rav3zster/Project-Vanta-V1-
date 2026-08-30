@@ -124,6 +124,16 @@ export const api = {
       method: "POST",
       body: JSON.stringify(b),
     }),
+  updateAnnouncement: (b: { id?: string; ts?: string; title?: string; body?: string; severity?: string }) =>
+    req<{ announcement: any }>("/announcements/update", {
+      method: "POST",
+      body: JSON.stringify(b),
+    }),
+  deleteAnnouncement: (b: { id?: string; ts?: string }) =>
+    req<{ ok: boolean }>("/announcements/delete", {
+      method: "POST",
+      body: JSON.stringify(b),
+    }),
   getRoster: () => req<{ players: Player[] }>("/roster"),
   updateRoster: (players: Player[]) =>
     req<{ players: Player[] }>("/roster", {

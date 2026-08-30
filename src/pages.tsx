@@ -260,6 +260,22 @@ export function RosterPage() {
   const [activeGame, setActiveGame] = useState<string>("ALL");
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
 
+  // The sliding "deck" animation below assumes the multi-column desktop grid
+  // (cards translate by multiples of their own width to reach column 0). Below
+  // the md breakpoint the grid collapses to a single column and the dossier
+  // renders separately underneath instead, so the slide must be disabled there
+  // — otherwise cards visually fly off-screen on phones/small tablets.
+  const [isDesktopLayout, setIsDesktopLayout] = useState<boolean>(
+    () => typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const onChange = () => setIsDesktopLayout(mq.matches);
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
   const roster = data.roster ?? [];
   const games = ["ALL", ...Array.from(new Set(roster.map((p) => p.game).filter(Boolean))) as string[]];
 
@@ -360,7 +376,7 @@ export function RosterPage() {
               {/* Render all cards persistently so browser executes fluid transform interpolation */}
               {filtered.map((p, idx) => {
                 const isSelected = selectedPlayer?.handle === p.handle;
-                const isExpanded = selectedPlayer !== null && activeGame !== "ALL";
+                const isExpanded = isDesktopLayout && selectedPlayer !== null && activeGame !== "ALL";
                 const selectedIdx = filtered.findIndex((x) => x.handle === selectedPlayer?.handle);
 
                 let cardStyle: React.CSSProperties = {

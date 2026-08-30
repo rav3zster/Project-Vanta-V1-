@@ -50,6 +50,28 @@ export function ImageCropperModal({
     setIsDragging(false);
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    setIsDragging(true);
+    setDragStart({ x: touch.clientX - position.x, y: touch.clientY - position.y });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    e.preventDefault();
+    setPosition({
+      x: touch.clientX - dragStart.x,
+      y: touch.clientY - dragStart.y,
+    });
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
@@ -173,8 +195,11 @@ export function ImageCropperModal({
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
             onWheel={handleWheel}
-            className="relative aspect-[4/5] w-60 max-w-[70vw] cursor-grab overflow-hidden border-2 border-accent/80 bg-background shadow-lg active:cursor-grabbing sm:w-80"
+            className="relative aspect-[4/5] w-60 max-w-[70vw] touch-none cursor-grab overflow-hidden border-2 border-accent/80 bg-background shadow-lg active:cursor-grabbing sm:w-80"
           >
             {/* Guide overlay grid */}
             <div className="pointer-events-none absolute inset-0 z-20 grid grid-cols-3 grid-rows-3 border border-accent/20">

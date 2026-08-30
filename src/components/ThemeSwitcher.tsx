@@ -32,7 +32,7 @@ export function ThemeSwitcher() {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-[80] mt-2 w-[300px] border border-border-strong bg-surface shadow-2xl shadow-black/40">
+        <div className="fixed inset-x-4 top-16 z-[80] border border-border-strong bg-surface shadow-2xl shadow-black/40 sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-[300px]">
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <Mono className="text-foreground">THEME CATALOGUE</Mono>
             <Mono>{themes.length} SKINS</Mono>

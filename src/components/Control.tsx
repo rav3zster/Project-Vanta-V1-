@@ -148,7 +148,7 @@ export function Control({ onClose }: { onClose: () => void }) {
             >
               {x.id}
               {x.id === "REGISTRATIONS" && pendingReg > 0 && (
-                <span className="ml-1.5 rounded-full bg-accent px-1.5 py-0.2 text-[8px] text-accent-foreground">{pendingReg}</span>
+                <span className="ml-1.5 rounded-full bg-accent px-1.5 py-0.5 text-[8px] text-accent-foreground">{pendingReg}</span>
               )}
               {tab === x.id && <span className="absolute inset-x-0 -bottom-px h-0.5 bg-accent" />}
             </button>
@@ -263,7 +263,7 @@ export function Control({ onClose }: { onClose: () => void }) {
                       <Mono>CHECK-IN CONTROL</Mono>
                       <div className="mt-4 grid gap-px border border-border bg-border sm:grid-cols-2">
                         {teams.map((tm) => (
-                          <div key={tm.id} className="flex items-center justify-between bg-surface px-4 py-2.5">
+                          <div key={tm.id} className="flex flex-wrap items-center justify-between gap-2 bg-surface px-4 py-2.5">
                             <span className="text-sm">{tm.name}</span>
                             <button disabled={busy || !can("checkins.manage")}
                               onClick={() => op(`Check-in ${tm.tag}`, "checkin", { teamId: tm.id, value: !tm.checkedIn })}
@@ -312,7 +312,7 @@ export function Control({ onClose }: { onClose: () => void }) {
                   </div>
                   <div className="grid gap-px border border-border bg-border">
                     {teams.map((tm) => (
-                      <div key={tm.id} className="flex items-center justify-between bg-surface px-4 py-3">
+                      <div key={tm.id} className="flex flex-wrap items-center justify-between gap-2 bg-surface px-4 py-3">
                         <div>
                           <div className="font-display text-sm font-bold">{tm.tag} <span className="text-muted">· {tm.name}</span></div>
                           <Mono>{tm.region}</Mono>
@@ -438,12 +438,12 @@ export function Control({ onClose }: { onClose: () => void }) {
                   <div className="mt-4 divide-y divide-border border border-border">
                     {audit.length === 0 && <div className="px-4 py-3"><Mono>No entries.</Mono></div>}
                     {audit.map((a, i) => (
-                      <div key={i} className="flex items-center justify-between px-4 py-2.5">
+                      <div key={i} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
                         <div>
                           <div className="font-mono text-[11px] text-foreground">{a.action}</div>
                           <Mono>{a.actor} · {a.role}</Mono>
                         </div>
-                        <Mono>{new Date(a.ts).toLocaleString()}</Mono>
+                        <Mono className="shrink-0">{new Date(a.ts).toLocaleString()}</Mono>
                       </div>
                     ))}
                   </div>
@@ -903,8 +903,8 @@ function RosterAdmin({
               </div>
 
               {/* Operator footer bar */}
-              <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-2.5">
-                <div className="flex items-center gap-2 font-mono text-[10px] text-muted">
+              <div className="mt-3 flex flex-col gap-2 border-t border-border/60 pt-2.5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] text-muted">
                   <span className="font-bold text-accent">{p.game || "VALORANT"}</span>
                   <span>·</span>
                   <span>{p.role || "FLEX"}</span>

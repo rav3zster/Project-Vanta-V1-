@@ -257,6 +257,9 @@ body {
   color: var(--color-foreground);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
+  /* Safety net: no single element should be able to force horizontal
+     scroll on narrow viewports. */
+  overflow-x: hidden;
 }
 
 /* Subtle grain / scanline texture over the classified base */
